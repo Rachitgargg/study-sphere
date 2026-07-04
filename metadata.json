@@ -1,0 +1,6 @@
+{
+  "name": "StudySphere AI",
+  "description": "An elegant dark-academic workspace that synthesizes textbooks, notes, and research papers into interactive chat sessions, multi-level outlines, quizzes, flippable flashcards, and viva board examiners.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
