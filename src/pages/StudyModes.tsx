@@ -4,7 +4,7 @@ import { useStudySphere } from '../context/StudySphereContext';
 import { 
   Award, 
   BookOpen, 
-  Mic, 
+  Network, 
   HelpCircle, 
   Sparkles, 
   ArrowRight,
@@ -58,14 +58,14 @@ export const StudyModes: React.FC = () => {
       badge: `${flashcards.length} Cards Available`
     },
     {
-      id: 'viva',
-      title: 'Viva Mode',
-      tagline: 'Oral Examination Board',
-      desc: 'Simulates intense academic oral exams. An examiner presents open-ended research questions, prompts for spoken/text answers, and scores keywords.',
-      icon: Mic,
-      path: '/viva',
-      color: 'border-academic-crimson/30 bg-academic-crimson/5 text-academic-crimson-bright',
-      badge: 'Simulated Voice board'
+      id: 'visual_learning',
+      title: 'Visual Learning',
+      tagline: 'Conceptual Diagramming',
+      desc: 'Explains complex concepts using flowcharts, timelines, concept maps, process diagrams, and decision trees rendered via Mermaid diagrams.',
+      icon: Network,
+      path: '/visual-learning',
+      color: 'border-academic-gold bg-academic-gold/5 text-academic-gold',
+      badge: 'Visual Abstract'
     }
   ];
 
@@ -145,7 +145,7 @@ export const StudyModes: React.FC = () => {
           <Sparkles className="w-4 h-4 text-academic-gold" />
         </div>
         <p className="text-xs text-academic-text-muted leading-relaxed font-serif">
-          <strong className="text-academic-cream">Tip for Scholars</strong>: Start with **Learn Mode** to digest materials linearly, reinforce with **Flashcards** for retrieval testing, and finally test your limits using the spoken **Viva Mode**.
+          <strong className="text-academic-cream">Tip for Scholars</strong>: Start with **Learn Mode** to digest materials linearly, reinforce with **Flashcards** for retrieval testing, and finally visualize structural links using **Visual Learning**.
         </p>
       </div>
     </div>

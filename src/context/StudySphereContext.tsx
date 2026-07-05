@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Document, ChatMessage, QuizQuestion, Flashcard, VivaQuestion } from '../types';
+import { mockDocuments, mockFlashcards, mockQuizQuestions, mockVivaQuestions } from '../lib/mockData';
 
 interface AddDocumentInput {
   name: string;
@@ -17,6 +18,7 @@ interface StudySphereContextType {
   removeDocument: (id: string) => void;
   activeDoc: Document | null;
   setActiveDoc: (doc: Document | null) => void;
+  updateDocumentSummary?: (id: string, summary: string) => void;
   chatMessages: ChatMessage[];
   addChatMessage: (
     role: 'user' | 'assistant',
@@ -49,6 +51,9 @@ interface StudySphereContextType {
   setAcademicLevel: (level: string) => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
+  onboardingComplete: boolean;
+  setOnboardingComplete: (complete: boolean) => void;
+  resetOnboarding: () => void;
   
   // Real-time tracking
   studyTime: number;
@@ -76,12 +81,12 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Load initial states from localStorage or empty defaults
   const [documents, setDocuments] = useState<Document[]>(() => {
     const saved = localStorage.getItem('study_sphere_documents');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : mockDocuments;
   });
   
   const [activeDoc, setActiveDoc] = useState<Document | null>(() => {
     const saved = localStorage.getItem('study_sphere_active_doc');
-    return saved ? JSON.parse(saved) : null;
+    return saved ? JSON.parse(saved) : (mockDocuments[0] || null);
   });
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
@@ -89,11 +94,35 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [quizzes, setQuizzes] = useState<QuizQuestion[]>([]);
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
-  const [vivaQuestions, setVivaQuestions] = useState<VivaQuestion[]>([]);
+  const [quizzes, setQuizzes] = useState<QuizQuestion[]>(() => {
+    const savedDoc = localStorage.getItem('study_sphere_active_doc');
+    const parsedDoc = savedDoc ? JSON.parse(savedDoc) : null;
+    const docId = parsedDoc ? parsedDoc.id : (mockDocuments[0]?.id || '');
+    return docId === 'doc-1' ? mockQuizQuestions : [];
+  });
+
+  const [flashcards, setFlashcards] = useState<Flashcard[]>(() => {
+    const savedDoc = localStorage.getItem('study_sphere_active_doc');
+    const parsedDoc = savedDoc ? JSON.parse(savedDoc) : null;
+    const docId = parsedDoc ? parsedDoc.id : (mockDocuments[0]?.id || '');
+    return docId === 'doc-1' ? mockFlashcards : [];
+  });
+
+  const [vivaQuestions, setVivaQuestions] = useState<VivaQuestion[]>(() => {
+    const savedDoc = localStorage.getItem('study_sphere_active_doc');
+    const parsedDoc = savedDoc ? JSON.parse(savedDoc) : null;
+    const docId = parsedDoc ? parsedDoc.id : (mockDocuments[0]?.id || '');
+    return docId === 'doc-1' ? mockVivaQuestions : [];
+  });
   const [searchQuery, setSearchQuery] = useState('');
-  const [username, setUsername] = useState('Alex');
+  const [username, setUsername] = useState<string>(() => {
+    const savedName = localStorage.getItem('name');
+    return savedName ? savedName : 'Alex';
+  });
+  const [onboardingComplete, setOnboardingComplete] = useState<boolean>(() => {
+    const savedOnboarding = localStorage.getItem('onboardingComplete');
+    return savedOnboarding === 'true';
+  });
   const [academicLevel, setAcademicLevel] = useState('Graduate (Computer Science)');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -121,12 +150,35 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
     localStorage.setItem('study_sphere_chat_messages', JSON.stringify(chatMessages));
   }, [chatMessages]);
 
+  useEffect(() => {
+    localStorage.setItem('name', username);
+  }, [username]);
+
+  useEffect(() => {
+    localStorage.setItem('onboardingComplete', String(onboardingComplete));
+  }, [onboardingComplete]);
+
   // Initialize active doc if null and docs are available
   useEffect(() => {
     if (!activeDoc && documents.length > 0) {
       setActiveDoc(documents[0]);
     }
   }, [documents, activeDoc]);
+
+  // Load mock study materials for default document doc-1, otherwise clear them
+  useEffect(() => {
+    if (activeDoc) {
+      if (activeDoc.id === 'doc-1') {
+        setQuizzes(mockQuizQuestions);
+        setFlashcards(mockFlashcards);
+        setVivaQuestions(mockVivaQuestions);
+      } else {
+        setQuizzes([]);
+        setFlashcards([]);
+        setVivaQuestions([]);
+      }
+    }
+  }, [activeDoc]);
 
   // Increment study time and log fraction to current day
   const incrementStudyTime = (secs: number) => {
@@ -180,6 +232,13 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setVivaQuestions([]);
   };
 
+  const resetOnboarding = () => {
+    localStorage.removeItem('onboardingComplete');
+    localStorage.removeItem('name');
+    setUsername('Alex');
+    setOnboardingComplete(false);
+  };
+
   // Document actions
   const addDocument = (newDoc: AddDocumentInput) => {
     const doc: Document = {
@@ -204,6 +263,13 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setDocuments(prev => prev.filter(doc => doc.id !== id));
     if (activeDoc?.id === id) {
       setActiveDoc(null);
+    }
+  };
+
+  const updateDocumentSummary = (id: string, summary: string) => {
+    setDocuments(prev => prev.map(d => d.id === id ? { ...d, summary } : d));
+    if (activeDoc?.id === id) {
+      setActiveDoc(prev => prev ? { ...prev, summary } : null);
     }
   };
 
@@ -325,7 +391,11 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
         resetStats,
         setQuizzes,
         setFlashcards,
-        setVivaQuestions
+        setVivaQuestions,
+        updateDocumentSummary,
+        onboardingComplete,
+        setOnboardingComplete,
+        resetOnboarding
       }}
     >
       {children}

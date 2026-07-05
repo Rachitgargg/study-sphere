@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { Mermaid } from './Mermaid';
 
 declare global {
   interface Window {
@@ -12,6 +13,27 @@ interface MathTextProps {
 }
 
 export const MathText: React.FC<MathTextProps> = ({ text, className = '' }) => {
+  if (!text) return null;
+
+  // Split text by mermaid code blocks: ```mermaid [content] ```
+  const parts = text.split(/(```mermaid[\s\S]*?```)/g);
+
+  return (
+    <div className={className}>
+      {parts.map((part, idx) => {
+        if (part.startsWith('```mermaid') && part.endsWith('```')) {
+          const chart = part.replace(/^```mermaid\s*/i, '').replace(/```$/, '').trim();
+          return <Mermaid key={idx} chart={chart} />;
+        }
+        
+        // Otherwise render standard math text
+        return <MathTextInner key={idx} text={part} />;
+      })}
+    </div>
+  );
+};
+
+const MathTextInner: React.FC<{ text: string }> = ({ text }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [katexAvailable, setKatexAvailable] = useState(!!window.katex);
 
@@ -47,13 +69,11 @@ export const MathText: React.FC<MathTextProps> = ({ text, className = '' }) => {
     }
   }, [text, katexAvailable]);
 
-  return <div ref={containerRef} className={className} />;
+  return <div ref={containerRef} className="inline" />;
 };
 
 function parseAndRenderMath(text: string): string {
-  console.log('[MathText] parseAndRenderMath input:', text);
   const katex = window.katex;
-  console.log('[MathText] KaTeX available in parser:', !!katex);
   
   if (!katex) {
     // If KaTeX is not loaded yet, return standard formatted bold text
@@ -64,11 +84,28 @@ function parseAndRenderMath(text: string): string {
 
   let html = text;
 
+  // Normalize delimiters to simplify regex matching:
+  // Convert \[ ... \] to $$ ... $$ (block math)
+  html = html.replace(/\\\[\s*([\s\S]*?)\s*\\\]/g, '$$$$$1$$$$');
+  html = html.replace(/\\\\\[\s*([\s\S]*?)\s*\\\\\]/g, '$$$$$1$$$$');
+  
+  // Convert \( ... \) to $ ... $ (inline math)
+  html = html.replace(/\\\(\s*([\s\S]*?)\s*\\\)/g, '$$$1$$');
+  html = html.replace(/\\\\\(\s*([\s\S]*?)\s*\\\\\)/g, '$$$1$$');
+
+  // If the entire text contains LaTeX math commands but no math delimiters,
+  // wrap it in block delimiters so that raw formulas are rendered.
+  const hasLaTeXCommands = /\\(mathbf|mathcal|frac|sum|left|right|lambda|alpha|beta|theta|gamma|sigma|mu|partial|nabla|vec|det|sin|cos|tan|log|ln|infty|cdot|times)/.test(html);
+  const hasDelimiters = html.includes('$');
+  
+  if (hasLaTeXCommands && !hasDelimiters) {
+    html = `$$${html}$$`;
+  }
+
   // 1. Process block math $$ ... $$
   const blockRegex = /\$\$\s*([\s\S]*?)\s*\$\$/g;
   html = html.replace(blockRegex, (match, math) => {
     try {
-      console.log('[MathText] Rendering block math:', math);
       const rendered = katex.renderToString(math.trim(), { displayMode: true, throwOnError: false });
       return `<div class="katex-display-container my-3 overflow-x-auto w-full flex justify-center">${rendered}</div>`;
     } catch (err) {
@@ -80,10 +117,8 @@ function parseAndRenderMath(text: string): string {
   // 2. Process inline math $ ... $
   const inlineRegex = /\$\s*([\s\S]*?)\s*\$/g;
   html = html.replace(inlineRegex, (match, math) => {
-    // Prevent empty or whitespace matches
     if (!math.trim()) return match;
     try {
-      console.log('[MathText] Rendering inline math:', math);
       return katex.renderToString(math.trim(), { displayMode: false, throwOnError: false });
     } catch (err) {
       console.error('KaTeX inline error:', err);

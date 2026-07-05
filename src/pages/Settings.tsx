@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStudySphere } from '../context/StudySphereContext';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -22,13 +22,38 @@ export const Settings: React.FC = () => {
     clearChat,
     resetQuiz,
     resetViva,
-    resetStats
+    resetStats,
+    resetOnboarding
   } = useStudySphere();
 
   const navigate = useNavigate();
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [citationStyle, setCitationStyle] = useState('IEEE');
   const [studyTarget, setStudyTarget] = useState(4); // daily hours
+  const [profileNameInput, setProfileNameInput] = useState(username);
+
+  useEffect(() => {
+    setProfileNameInput(username);
+  }, [username]);
+
+  const isProfileNameValid = profileNameInput.trim().length > 0 && profileNameInput.trim().length <= 40;
+
+  const handleProfileSave = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isProfileNameValid) {
+      setUsername(profileNameInput.trim());
+      setSuccessMsg('Personal information updated successfully!');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    }
+  };
+
+  const handleResetOnboarding = () => {
+    if (confirm("Are you sure you want to reset onboarding status? This will clear your saved name and prompt you again on dashboard launch.")) {
+      resetOnboarding?.();
+      setSuccessMsg('Onboarding status reset successfully.');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    }
+  };
 
   const saveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +86,46 @@ export const Settings: React.FC = () => {
       <form onSubmit={saveSettings} className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left Side: Profile & Target Fields */}
         <div className="md:col-span-2 space-y-6">
+          {/* Personal Information section */}
+          <div className="bg-academic-paper border border-academic-card p-6 rounded-xl space-y-5 gold-glow">
+            <h3 className="font-serif text-md font-bold text-academic-cream flex items-center gap-2 pb-3 border-b border-academic-card/50">
+              <User className="w-4.5 h-4.5 text-academic-gold" />
+              Personal Information
+            </h3>
+
+            {successMsg && (
+              <div className="bg-academic-emerald/10 border border-academic-emerald/30 text-academic-cream px-4 py-2.5 rounded text-xs animate-fade-in flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-academic-emerald-bright" />
+                <span>{successMsg}</span>
+              </div>
+            )}
+
+            <div className="space-y-4 text-xs font-mono text-left">
+              <div className="space-y-1.5">
+                <label className="text-academic-text-muted">NAME</label>
+                <input
+                  type="text"
+                  value={profileNameInput}
+                  onChange={(e) => setProfileNameInput(e.target.value)}
+                  className="w-full bg-academic-black border border-academic-card rounded-lg px-4 py-2.5 text-academic-cream focus:outline-none focus:border-academic-gold/40 font-sans"
+                  maxLength={40}
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleProfileSave}
+                  disabled={!isProfileNameValid}
+                  className="px-6 py-2.5 bg-academic-gold hover:bg-academic-gold-muted text-academic-black disabled:opacity-40 disabled:cursor-not-allowed font-sans font-bold text-xs tracking-wider rounded-lg transition-all cursor-pointer border-0"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-academic-paper border border-academic-card p-6 rounded-xl space-y-5 gold-glow">
             <h3 className="font-serif text-md font-bold text-academic-cream flex items-center gap-2 pb-3 border-b border-academic-card/50">
               <User className="w-4.5 h-4.5 text-academic-gold" />
@@ -179,6 +244,15 @@ export const Settings: React.FC = () => {
             >
               <RotateCcw className="w-3.5 h-3.5" />
               Full System Reset
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResetOnboarding}
+              className="w-full py-2.5 bg-academic-gold/10 hover:bg-academic-gold text-academic-cream hover:text-academic-black border border-academic-gold/30 hover:border-transparent text-xs font-sans font-bold tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer mt-3"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset Onboarding
             </button>
           </div>
 

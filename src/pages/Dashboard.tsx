@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStudySphere } from '../context/StudySphereContext';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -21,11 +21,26 @@ export const Dashboard: React.FC = () => {
     activeDoc, 
     setActiveDoc, 
     username,
+    setUsername,
+    onboardingComplete,
+    setOnboardingComplete,
     studyTime,
     weeklyHours
   } = useStudySphere();
 
   const navigate = useNavigate();
+  const [nameInput, setNameInput] = useState('');
+
+  const trimmedName = nameInput.trim();
+  const isNameInputValid = trimmedName.length > 0 && trimmedName.length <= 40;
+
+  const handleOnboardingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isNameInputValid) {
+      setUsername(trimmedName);
+      setOnboardingComplete?.(true);
+    }
+  };
 
   const totalTrackedHours = weeklyHours.reduce((sum, entry) => sum + entry.hours, 0);
   const maxHours = Math.max(...weeklyHours.map(d => d.hours), 1);
@@ -69,8 +84,51 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      {/* Greetings block */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {!onboardingComplete ? (
+        <div className="max-w-md mx-auto my-12 animate-fade-in text-left">
+          <div className="bg-academic-paper border border-academic-card p-8 rounded-2xl space-y-6 shadow-2xl gold-glow relative overflow-hidden">
+            {/* Ambient gold glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-academic-gold/5 blur-[50px] rounded-full pointer-events-none" />
+            
+            <div className="w-16 h-16 rounded-full bg-academic-card border border-academic-gold/30 flex items-center justify-center mx-auto shadow-lg text-academic-gold text-2xl animate-pulse">
+              👋
+            </div>
+
+            <div className="space-y-2 text-center">
+              <h3 className="font-serif text-xl font-bold text-academic-cream">Welcome to StudySphere AI</h3>
+              <p className="text-xs text-academic-text-muted font-serif">
+                Before we begin... What should we call you?
+              </p>
+            </div>
+
+            <form onSubmit={handleOnboardingSubmit} className="space-y-4">
+              <div className="space-y-1.5 text-left font-mono text-[10px]">
+                <label className="text-academic-text-muted uppercase">SCHOLAR USERNAME</label>
+                <input
+                  type="text"
+                  placeholder="Enter your name"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  className="w-full bg-academic-black border border-academic-card hover:border-academic-gold/30 focus:border-academic-gold text-academic-cream rounded-lg px-4 py-3 text-sm focus:outline-none transition-all font-sans"
+                  maxLength={40}
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={!isNameInputValid}
+                className="w-full py-3 bg-academic-gold hover:bg-academic-gold-muted text-academic-black disabled:opacity-40 disabled:cursor-not-allowed font-sans font-bold text-xs tracking-wider rounded-lg shadow-md transition-all cursor-pointer border-0"
+              >
+                Continue
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Greetings block */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="font-serif text-3xl font-bold tracking-tight text-academic-cream">
             Good evening, {username} 👋
@@ -185,7 +243,7 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-academic-cream">Study Mode Hub</h4>
-                  <p className="text-[10px] text-academic-text-muted">Deploy quiz, flashcard, or viva</p>
+                  <p className="text-[10px] text-academic-text-muted">Deploy quiz, flashcard, or visual learning</p>
                 </div>
               </div>
               <ArrowRight className="w-4 h-4 text-academic-text-muted group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
@@ -312,6 +370,8 @@ export const Dashboard: React.FC = () => {
           })}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 };

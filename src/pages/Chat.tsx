@@ -15,7 +15,9 @@ import {
   Clock,
   Layers,
   GraduationCap,
-  RotateCcw
+  RotateCcw,
+  Network,
+  Info
 } from 'lucide-react';
 
 // Helper to format bold markdown tags
@@ -30,11 +32,15 @@ const QuizRenderer: React.FC<{ content: string }> = ({ content }) => {
   const [showAnswers, setShowAnswers] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
-    setQuestions(parseQuiz(content));
+    if (content) {
+      setQuestions(parseQuiz(content));
+    } else {
+      setQuestions([]);
+    }
   }, [content]);
 
-  if (questions.length === 0) {
-    return <div className="whitespace-pre-wrap">{content}</div>;
+  if (!content || questions.length === 0) {
+    return <div className="whitespace-pre-wrap">{content || ''}</div>;
   }
 
   return (
@@ -42,24 +48,24 @@ const QuizRenderer: React.FC<{ content: string }> = ({ content }) => {
       <h4 className="font-serif text-xs font-bold text-academic-gold flex items-center gap-1.5 border-b border-academic-card/30 pb-2 tracking-wider uppercase">
         <Sparkles className="w-3.5 h-3.5" /> Interactive Evaluation Quiz
       </h4>
-      {questions.map((q, qIdx) => (
-        <div key={q.id} className="space-y-3 pb-3 border-b border-academic-card/30 last:border-b-0 last:pb-0">
-          <p className="font-semibold text-academic-cream text-xs">{qIdx + 1}. {q.question}</p>
+      {(questions || []).map((q, qIdx) => (
+        <div key={q.id || qIdx} className="space-y-3 pb-3 border-b border-academic-card/30 last:border-b-0 last:pb-0">
+          <p className="font-semibold text-academic-cream text-xs">{qIdx + 1}. {q?.question || ''}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {q.options.map((opt, optIdx) => {
+            {(q?.options || []).map((opt, optIdx) => {
               const isSelected = userAnswers[qIdx] === optIdx;
               const optionLetters = ['A', 'B', 'C', 'D'];
               return (
                 <button
                   key={optIdx}
                   onClick={() => setUserAnswers(prev => ({ ...prev, [qIdx]: optIdx }))}
-                  className={`px-3 py-2 rounded-lg text-left text-xs transition-all border ${
+                  className={`px-3 py-2 rounded-lg text-left text-xs transition-all border cursor-pointer ${
                     isSelected
                       ? 'bg-indigo-600/20 border-indigo-500 text-academic-cream font-semibold'
                       : 'bg-white/5 border-transparent text-academic-text-muted hover:bg-white/10 hover:text-academic-cream hover:border-academic-card/30'
                   }`}
                 >
-                  <span className="font-mono text-academic-gold mr-1 font-bold">{optionLetters[optIdx]})</span> {opt}
+                  <span className="font-mono text-academic-gold mr-1 font-bold">{optionLetters[optIdx] || ''})</span> {opt || ''}
                 </button>
               );
             })}
@@ -67,7 +73,7 @@ const QuizRenderer: React.FC<{ content: string }> = ({ content }) => {
           <div className="flex items-center justify-between mt-2">
             <button
               onClick={() => setShowAnswers(prev => ({ ...prev, [qIdx]: !prev[qIdx] }))}
-              className="text-[10px] text-indigo-400 hover:text-indigo-300 font-mono transition-colors"
+              className="text-[10px] text-indigo-400 hover:text-indigo-300 font-mono transition-colors border-0 bg-transparent cursor-pointer"
             >
               {showAnswers[qIdx] ? 'Hide Answer Key' : 'Reveal Answer Key'}
             </button>
@@ -82,8 +88,8 @@ const QuizRenderer: React.FC<{ content: string }> = ({ content }) => {
           {showAnswers[qIdx] && (
             <div className="bg-academic-gold/5 border border-academic-gold/15 rounded-lg p-3 text-[11px] font-mono text-academic-cream leading-relaxed animate-fade-in">
               <span className="text-academic-gold font-bold">Answer: </span>
-              {['A', 'B', 'C', 'D'][q.correctAnswer]} ({q.options[q.correctAnswer]})
-              <p className="mt-1 text-[10px] text-academic-text-muted italic">Reference: {q.explanation}</p>
+              {['A', 'B', 'C', 'D'][q.correctAnswer] || ''} ({q?.options?.[q.correctAnswer] || ''})
+              <p className="mt-1 text-[10px] text-academic-text-muted italic">Reference: {q?.explanation || ''}</p>
             </div>
           )}
         </div>
@@ -99,16 +105,21 @@ const FlashcardRenderer: React.FC<{ content: string }> = ({ content }) => {
   const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
-    setCards(parseFlashcards(content));
+    if (content) {
+      setCards(parseFlashcards(content));
+    } else {
+      setCards([]);
+    }
     setCurrentIdx(0);
     setFlipped(false);
   }, [content]);
 
-  if (cards.length === 0) {
-    return <div className="whitespace-pre-wrap">{content}</div>;
+  if (!content || cards.length === 0) {
+    return <div className="whitespace-pre-wrap">{content || ''}</div>;
   }
 
-  const currentCard = cards[currentIdx];
+  const currentCard = cards[currentIdx] || cards[0];
+  if (!currentCard) return null;
 
   return (
     <div className="my-3 space-y-3 max-w-sm mx-auto">
@@ -123,12 +134,12 @@ const FlashcardRenderer: React.FC<{ content: string }> = ({ content }) => {
         {!flipped ? (
           <div className="animate-fade-in space-y-1">
             <span className="text-[9px] text-academic-gold font-mono uppercase tracking-widest font-bold">FRONT SIDE</span>
-            <p className="text-xs font-semibold text-academic-cream leading-relaxed">{currentCard.front}</p>
+            <p className="text-xs font-semibold text-academic-cream leading-relaxed">{currentCard.front || ''}</p>
           </div>
         ) : (
           <div className="animate-fade-in space-y-1">
             <span className="text-[9px] text-indigo-400 font-mono uppercase tracking-widest font-bold">BACK SIDE</span>
-            <p className="text-xs font-serif text-academic-cream leading-relaxed">{currentCard.back}</p>
+            <p className="text-xs font-serif text-academic-cream leading-relaxed">{currentCard.back || ''}</p>
           </div>
         )}
       </div>
@@ -140,7 +151,7 @@ const FlashcardRenderer: React.FC<{ content: string }> = ({ content }) => {
             setCurrentIdx(prev => prev - 1);
             setFlipped(false);
           }}
-          className="text-[10px] font-mono text-academic-text-muted hover:text-academic-cream disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+          className="text-[10px] font-mono text-academic-text-muted hover:text-academic-cream disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer border-0 bg-transparent"
         >
           ← Previous
         </button>
@@ -153,7 +164,7 @@ const FlashcardRenderer: React.FC<{ content: string }> = ({ content }) => {
             setCurrentIdx(prev => prev + 1);
             setFlipped(false);
           }}
-          className="text-[10px] font-mono text-academic-text-muted hover:text-academic-cream disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+          className="text-[10px] font-mono text-academic-text-muted hover:text-academic-cream disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer border-0 bg-transparent"
         >
           Next →
         </button>
@@ -162,23 +173,15 @@ const FlashcardRenderer: React.FC<{ content: string }> = ({ content }) => {
   );
 };
 
-// Custom Renderer for Viva Mode (Oral exam numbered questions)
-const VivaRenderer: React.FC<{ content: string }> = ({ content }) => {
-  const lines = content.split('\n');
+// Custom Renderer for Visual Learning Mode
+const VisualLearningRenderer: React.FC<{ content: string }> = ({ content }) => {
   return (
-    <div className="space-y-3 my-2 p-4 bg-academic-black/40 border border-academic-card/85 rounded-xl font-serif">
+    <div className="space-y-3 my-2 p-4 bg-academic-black/40 border border-academic-card/85 rounded-xl font-serif text-left">
       <h4 className="font-serif text-xs font-bold text-academic-gold border-b border-academic-card/30 pb-2 flex items-center gap-1.5 tracking-wider uppercase">
-        <GraduationCap className="w-4 h-4" /> Viva Exam Questions
+        <Network className="w-4 h-4" /> Visual Learning Diagram
       </h4>
-      <div className="space-y-2">
-        {lines.map((line, idx) => {
-          if (!line.trim()) return null;
-          return (
-            <p key={idx} className="text-xs text-academic-cream/90 leading-relaxed font-sans">
-              {line}
-            </p>
-          );
-        })}
+      <div className="space-y-2 font-sans">
+        <MathText text={content || ''} className="w-full inline-block" />
       </div>
     </div>
   );
@@ -186,7 +189,7 @@ const VivaRenderer: React.FC<{ content: string }> = ({ content }) => {
 
 // Custom Renderer for Summary Mode (concise key bullets)
 const SummaryRenderer: React.FC<{ content: string }> = ({ content }) => {
-  const lines = content.split('\n');
+  const lines = (content || '').split('\n');
   return (
     <div className="space-y-3 my-2 p-4 bg-academic-black/40 border border-academic-card/85 rounded-xl font-serif">
       <h4 className="font-serif text-xs font-bold text-academic-gold border-b border-academic-card/30 pb-2 flex items-center gap-1.5 tracking-wider uppercase">
@@ -219,7 +222,7 @@ const SummaryRenderer: React.FC<{ content: string }> = ({ content }) => {
 
 // Custom Renderer for Revision Mode (exam notes highlighting math and terms)
 const RevisionRenderer: React.FC<{ content: string }> = ({ content }) => {
-  const lines = content.split('\n');
+  const lines = (content || '').split('\n');
   return (
     <div className="space-y-3 my-2 p-4 bg-academic-black/40 border border-academic-card/85 rounded-xl font-serif">
       <h4 className="font-serif text-xs font-bold text-academic-gold border-b border-academic-card/30 pb-2 flex items-center gap-1.5 tracking-wider uppercase">
@@ -262,6 +265,15 @@ export const Chat: React.FC = () => {
   const [mode, setMode] = useState<string>('chat');
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  // Settings states for custom counts
+  const [quizSize, setQuizSize] = useState('10');
+  const [customQuizSize, setCustomQuizSize] = useState('');
+  const [isCustomQuiz, setIsCustomQuiz] = useState(false);
+
+  const [flashcardCount, setFlashcardCount] = useState('15');
+  const [customFlashcardCount, setCustomFlashcardCount] = useState('');
+  const [isCustomFlashcard, setIsCustomFlashcard] = useState(false);
+
   const samplePrompts = [
     'Explain the primary concept in this document.',
     'Formulate a 3-bullet core summary of this text.',
@@ -287,6 +299,34 @@ export const Chat: React.FC = () => {
     setInput('');
     setIsTyping(true);
 
+    // Format query with session history connections to ensure concept diversity
+    let augmentedMessage = textToSend;
+    if (mode === 'quiz') {
+      const pastQuestions = chatMessages
+        .filter(m => m.mode === 'quiz' && m.role === 'assistant')
+        .map(m => m.content)
+        .join('\n');
+      if (pastQuestions) {
+        const qMatches = pastQuestions.match(/(?:Q\d+|Question\s*\d+)[\s\S]*?(?=\r?\n\s*[A-D][\)\.]|$)/gi) || [];
+        const uniqueQNames = Array.from(new Set(qMatches.map(q => q.replace(/^(?:Q\d+|Question\s*\d+)\s*[:\.]?\s*/i, '').trim().substring(0, 50)))).slice(0, 10);
+        if (uniqueQNames.length > 0) {
+          augmentedMessage += `\nPreviously generated questions/topics in this session: [${uniqueQNames.join(', ')}]. Do NOT repeat these topics or ask identical questions.`;
+        }
+      }
+    } else if (mode === 'flashcards') {
+      const pastCards = chatMessages
+        .filter(m => m.mode === 'flashcards' && m.role === 'assistant')
+        .map(m => m.content)
+        .join('\n');
+      if (pastCards) {
+        const fMatches = pastCards.match(/Front:\s*(.*?)(?=\r?\nBack:|$)/gi) || [];
+        const uniqueFNames = Array.from(new Set(fMatches.map(f => f.replace(/^Front:\s*/i, '').trim().substring(0, 50)))).slice(0, 10);
+        if (uniqueFNames.length > 0) {
+          augmentedMessage += `\nPreviously generated card concepts/terms in this session: [${uniqueFNames.join(', ')}]. Do NOT repeat these definitions or terms.`;
+        }
+      }
+    }
+
     // Append streaming placeholder assistant message to the context log
     addChatMessage('assistant', '', mode);
 
@@ -294,7 +334,7 @@ export const Chat: React.FC = () => {
 
     try {
       await sendChatMessageStream(
-        textToSend,
+        augmentedMessage,
         mode,
         (context) => {
           // OnContext callback: updates context preview source lists
@@ -425,7 +465,7 @@ export const Chat: React.FC = () => {
             { id: 'summary', label: 'Summary', icon: FileText },
             { id: 'quiz', label: 'Quiz', icon: Sparkles },
             { id: 'flashcards', label: 'Flashcards', icon: Layers },
-            { id: 'viva', label: 'Viva', icon: GraduationCap },
+            { id: 'visual_learning', label: 'Visual Learning', icon: Network },
             { id: 'revision', label: 'Revision', icon: BookOpen }
           ].map((item) => {
             const isSelected = mode === item.id;
@@ -433,8 +473,11 @@ export const Chat: React.FC = () => {
             return (
               <button
                 key={item.id}
-                onClick={() => setMode(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-sans font-bold border transition-all flex-shrink-0 cursor-pointer ${
+                onClick={() => !isTyping && setMode(item.id)}
+                disabled={isTyping}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-sans font-bold border transition-all flex-shrink-0 ${
+                  isTyping ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                } ${
                   isSelected
                     ? 'bg-academic-gold/15 border-academic-gold text-academic-gold shadow-md'
                     : 'bg-white/5 border-transparent text-academic-text-muted hover:border-academic-card/35 hover:bg-academic-card/30 hover:text-academic-cream'
@@ -485,8 +528,8 @@ export const Chat: React.FC = () => {
                       <QuizRenderer content={msg.content} />
                     ) : msg.mode === 'flashcards' ? (
                       <FlashcardRenderer content={msg.content} />
-                    ) : msg.mode === 'viva' ? (
-                      <VivaRenderer content={msg.content} />
+                    ) : msg.mode === 'visual_learning' ? (
+                      <VisualLearningRenderer content={msg.content} />
                     ) : msg.mode === 'summary' ? (
                       <SummaryRenderer content={msg.content} />
                     ) : msg.mode === 'revision' ? (
@@ -586,6 +629,141 @@ export const Chat: React.FC = () => {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Study Mode Settings & Info Banners */}
+        {mode === 'quiz' && (
+          <div className="bg-academic-paper border border-academic-card p-4 rounded-xl mx-4 mb-3 gold-glow space-y-3 font-sans text-xs text-left animate-fade-in">
+            <span className="font-serif font-bold text-academic-cream flex items-center gap-1.5 border-b border-academic-card/50 pb-2">
+              <Sparkles className="w-4 h-4 text-academic-gold" />
+              Quiz Settings
+            </span>
+            
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-academic-text-muted">Number of Questions:</span>
+                <select
+                  value={isCustomQuiz ? 'custom' : quizSize}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'custom') {
+                      setIsCustomQuiz(true);
+                    } else {
+                      setIsCustomQuiz(false);
+                      setQuizSize(val);
+                    }
+                  }}
+                  className="bg-academic-black border border-academic-card text-academic-cream px-2 py-1 rounded focus:outline-none focus:border-academic-gold cursor-pointer"
+                >
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                  <option value="20">20</option>
+                  <option value="custom">Custom Number</option>
+                </select>
+              </div>
+
+              {isCustomQuiz && (
+                <div className="flex items-center gap-2 animate-fade-in">
+                  <span className="text-academic-text-muted">Count (1-50):</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={customQuizSize}
+                    onChange={(e) => setCustomQuizSize(e.target.value)}
+                    className="bg-academic-black border border-academic-card text-academic-cream px-2 py-1 rounded w-16 focus:outline-none focus:border-academic-gold text-center"
+                  />
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  const finalSize = isCustomQuiz ? Math.max(1, Math.min(50, parseInt(customQuizSize) || 10)) : parseInt(quizSize);
+                  handleSend(`Generate exactly ${finalSize} quiz questions.`);
+                }}
+                disabled={isTyping || (isCustomQuiz && (!customQuizSize || parseInt(customQuizSize) < 1 || parseInt(customQuizSize) > 50))}
+                className="sm:ml-auto px-4 py-1.5 bg-academic-gold hover:bg-academic-gold-muted text-academic-black font-sans font-bold text-xs tracking-wider rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-0"
+              >
+                Generate Quiz
+              </button>
+            </div>
+          </div>
+        )}
+
+        {mode === 'flashcards' && (
+          <div className="bg-academic-paper border border-academic-card p-4 rounded-xl mx-4 mb-3 gold-glow space-y-3 font-sans text-xs text-left animate-fade-in">
+            <span className="font-serif font-bold text-academic-cream flex items-center gap-1.5 border-b border-academic-card/50 pb-2">
+              <Layers className="w-4 h-4 text-academic-gold" />
+              Flashcard Settings
+            </span>
+            
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-academic-text-muted">Number of Flashcards:</span>
+                <select
+                  value={isCustomFlashcard ? 'custom' : flashcardCount}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'custom') {
+                      setIsCustomFlashcard(true);
+                    } else {
+                      setIsCustomFlashcard(false);
+                      setFlashcardCount(val);
+                    }
+                  }}
+                  className="bg-academic-black border border-academic-card text-academic-cream px-2 py-1 rounded focus:outline-none focus:border-academic-gold cursor-pointer"
+                >
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                  <option value="20">20</option>
+                  <option value="custom">Custom Number</option>
+                </select>
+              </div>
+
+              {isCustomFlashcard && (
+                <div className="flex items-center gap-2 animate-fade-in">
+                  <span className="text-academic-text-muted">Count (1-50):</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={customFlashcardCount}
+                    onChange={(e) => setCustomFlashcardCount(e.target.value)}
+                    className="bg-academic-black border border-academic-card text-academic-cream px-2 py-1 rounded w-16 focus:outline-none focus:border-academic-gold text-center"
+                  />
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  const finalCount = isCustomFlashcard ? Math.max(1, Math.min(50, parseInt(customFlashcardCount) || 15)) : parseInt(flashcardCount);
+                  handleSend(`Generate exactly ${finalCount} flashcards.`);
+                }}
+                disabled={isTyping || (isCustomFlashcard && (!customFlashcardCount || parseInt(customFlashcardCount) < 1 || parseInt(customFlashcardCount) > 50))}
+                className="sm:ml-auto px-4 py-1.5 bg-academic-gold hover:bg-academic-gold-muted text-academic-black font-sans font-bold text-xs tracking-wider rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-0"
+              >
+                Generate Flashcards
+              </button>
+            </div>
+          </div>
+        )}
+
+        {mode === 'learn' && (
+          <div className="bg-indigo-950/20 border border-indigo-500/20 p-3 rounded-xl mx-4 mb-3 flex items-start gap-2.5 text-xs text-indigo-300 font-sans text-left animate-fade-in">
+            <Info className="w-4.5 h-4.5 text-indigo-400 mt-0.5 flex-shrink-0" />
+            <span>Learn Mode provides detailed explanations with examples and analogies.</span>
+          </div>
+        )}
+
+        {mode === 'visual_learning' && (
+          <div className="bg-indigo-950/20 border border-indigo-500/20 p-3 rounded-xl mx-4 mb-3 flex items-start gap-2.5 text-xs text-indigo-300 font-sans text-left animate-fade-in">
+            <Info className="w-4.5 h-4.5 text-indigo-400 mt-0.5 flex-shrink-0" />
+            <span>Visual Learning explains concepts using diagrams, flowcharts and structured visual representations.</span>
           </div>
         )}
 

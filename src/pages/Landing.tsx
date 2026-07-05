@@ -31,9 +31,9 @@ export const Landing: React.FC = () => {
       icon: Network,
     },
     {
-      title: 'Oral Viva Examiner',
-      desc: 'Simulate high-stakes university oral boards with an interactive, spoken-feedback examiner engine.',
-      icon: Mic,
+      title: 'Visual Learning',
+      desc: 'Generate interactive flowcharts, timelines, and concept maps via Mermaid diagrams to visualize concepts.',
+      icon: Network,
     }
   ];
 

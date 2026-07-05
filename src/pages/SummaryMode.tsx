@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useStudySphere } from '../context/StudySphereContext';
 import { useNavigate } from 'react-router-dom';
+import { MathText } from '../components/MathText';
+import { sendChatMessage } from '../lib/api';
 import { 
   ArrowLeft, 
   FileText, 
@@ -10,16 +12,39 @@ import {
   Share2, 
   Bookmark, 
   TrendingUp,
-  Brain
+  Brain,
+  Sparkles
 } from 'lucide-react';
 
 export const SummaryMode: React.FC = () => {
-  const { activeDoc } = useStudySphere();
+  const { activeDoc, updateDocumentSummary } = useStudySphere();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'brief' | 'comprehensive' | 'theorems'>('brief');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
-  const docTitle = activeDoc ? activeDoc.name : 'Machine Learning Foundations.pdf';
-  const docConcepts = activeDoc?.concepts || ['Convexity', 'Stochastic Gradient Descent', 'L1/L2 Weights Penalty'];
+  const docTitle = activeDoc ? activeDoc.name : 'No active document';
+  const docConcepts = activeDoc?.concepts || ['Vector DB', 'SentenceTransformers', 'ChromaDB'];
+
+  const handleGenerate = async () => {
+    if (!activeDoc || !updateDocumentSummary) return;
+    setIsGenerating(true);
+    setGenerationError(null);
+    try {
+      const prompt = `Generate a structured conceptual summary of this document. Focus on key ideas, equations, and main definitions using clear formatting.`;
+      const result = await sendChatMessage(prompt, 'summary');
+      if (result.answer) {
+        updateDocumentSummary(activeDoc.id, result.answer);
+      } else {
+        setGenerationError('Failed to generate summary content from document. Try again.');
+      }
+    } catch (err: any) {
+      console.error('[SummaryMode] generate error:', err);
+      setGenerationError(err.message || 'System connection failure. Check backend server.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const briefContent = {
     title: 'Executive Digest',
@@ -59,13 +84,15 @@ export const SummaryMode: React.FC = () => {
     }
   ];
 
+  const isDefaultDoc = activeDoc?.id === 'doc-1';
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header bar */}
       <div className="flex items-center justify-between border-b border-academic-card/40 pb-4">
         <button
           onClick={() => navigate('/study-modes')}
-          className="flex items-center gap-1.5 text-xs text-academic-text-muted hover:text-academic-cream font-mono transition-colors"
+          className="flex items-center gap-1.5 text-xs text-academic-text-muted hover:text-academic-cream font-mono transition-colors border-0 bg-transparent cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Hub
@@ -74,7 +101,7 @@ export const SummaryMode: React.FC = () => {
         <div className="flex gap-2">
           <button
             onClick={() => window.print()}
-            className="p-1.5 rounded bg-academic-card border border-academic-card text-academic-text-muted hover:text-academic-cream text-xs font-mono transition-colors"
+            className="p-1.5 rounded bg-academic-card border border-academic-card text-academic-text-muted hover:text-academic-cream text-xs font-mono transition-colors border-solid cursor-pointer"
             title="Download Abstract"
           >
             Export abstract
@@ -96,14 +123,14 @@ export const SummaryMode: React.FC = () => {
                 {docTitle}
               </h3>
               <p className="text-xs text-academic-text-muted mt-1 leading-relaxed font-serif">
-                Automatic linguistic extraction generated successfully.
+                {isDefaultDoc || activeDoc?.summary ? 'Automatic linguistic extraction generated successfully.' : 'Abstract not generated yet.'}
               </p>
             </div>
 
             <div className="border-t border-academic-card/50 pt-4 space-y-3">
               <span className="text-[10px] font-mono tracking-wider text-academic-text-muted uppercase">Extracted Terms</span>
               <div className="flex flex-wrap gap-1.5">
-                {docConcepts.map((conc, i) => (
+                {(docConcepts || []).map((conc, i) => (
                   <span key={i} className="px-2 py-0.5 rounded bg-academic-black border border-academic-card text-[10px] font-mono text-academic-text-muted">
                     {conc}
                   </span>
@@ -127,109 +154,168 @@ export const SummaryMode: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span>Key Equations:</span>
-                <span className="text-academic-cream">4 Extracted</span>
+                <span className="text-academic-cream">{isDefaultDoc ? '2 Extracted' : activeDoc?.summary ? 'Formulas Integrated' : '0 Extracted'}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Side: Tabbed Summaries Reader */}
+        {/* Right Side: Dynamic / Mock Summary Area */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Tabs header */}
-          <div className="flex bg-academic-paper border border-academic-card p-1 rounded-xl">
-            <button
-              onClick={() => setActiveTab('brief')}
-              className={`flex-1 text-center py-2 text-xs font-sans font-bold rounded-lg transition-colors ${
-                activeTab === 'brief' 
-                  ? 'bg-academic-card text-academic-gold' 
-                  : 'text-academic-text-muted hover:text-academic-cream'
-              }`}
-            >
-              Brief Digest
-            </button>
-            <button
-              onClick={() => setActiveTab('comprehensive')}
-              className={`flex-1 text-center py-2 text-xs font-sans font-bold rounded-lg transition-colors ${
-                activeTab === 'comprehensive' 
-                  ? 'bg-academic-card text-academic-gold' 
-                  : 'text-academic-text-muted hover:text-academic-cream'
-              }`}
-            >
-              Comprehensive
-            </button>
-            <button
-              onClick={() => setActiveTab('theorems')}
-              className={`flex-1 text-center py-2 text-xs font-sans font-bold rounded-lg transition-colors ${
-                activeTab === 'theorems' 
-                  ? 'bg-academic-card text-academic-gold' 
-                  : 'text-academic-text-muted hover:text-academic-cream'
-              }`}
-            >
-              Theorems & Formulas
-            </button>
-          </div>
-
-          {/* Active summary area */}
-          <div className="bg-academic-paper border border-academic-card p-6 md:p-8 rounded-xl min-h-[400px] gold-glow animate-fade-in">
-            {activeTab === 'brief' && (
-              <div className="space-y-6 font-serif">
-                <div>
-                  <h3 className="font-serif text-lg font-bold text-academic-cream">{briefContent.title}</h3>
-                  <div className="h-px bg-academic-card/50 my-3" />
-                </div>
-
-                <ul className="space-y-4 text-sm text-academic-cream/90 leading-relaxed">
-                  {briefContent.bullets.map((b, i) => (
-                    <li key={i} className="flex gap-3">
-                      <span className="text-academic-gold mt-1.5 flex-shrink-0 font-bold">•</span>
-                      <span>{b}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="p-4 bg-academic-dark border border-academic-card/50 rounded-xl mt-6">
-                  <span className="text-[10px] font-mono text-academic-gold uppercase tracking-wider block mb-1">Synthesized Abstract</span>
-                  <p className="text-xs text-academic-text-muted leading-relaxed font-sans">{briefContent.summary}</p>
-                </div>
+          {isGenerating ? (
+            <div className="bg-academic-paper border border-academic-card p-8 rounded-xl min-h-[400px] flex flex-col items-center justify-center text-center space-y-4 font-serif gold-glow">
+              <div className="w-12 h-12 rounded-full border-2 border-academic-gold border-t-transparent animate-spin mx-auto" />
+              <h3 className="font-serif text-lg font-bold text-academic-cream">Analyzing Codex Abstract...</h3>
+              <p className="text-xs text-academic-text-muted max-w-xs mx-auto leading-relaxed font-sans">
+                Generating hierarchical semantic summaries and parsing mathematical bounds from index context.
+              </p>
+            </div>
+          ) : isDefaultDoc ? (
+            /* Render Mock Tabbed Reader for Default Doc */
+            <div className="space-y-6">
+              {/* Tabs header */}
+              <div className="flex bg-academic-paper border border-academic-card p-1 rounded-xl">
+                <button
+                  onClick={() => setActiveTab('brief')}
+                  className={`flex-1 text-center py-2 text-xs font-sans font-bold rounded-lg transition-colors border-0 cursor-pointer ${
+                    activeTab === 'brief' 
+                      ? 'bg-academic-card text-academic-gold' 
+                      : 'text-academic-text-muted hover:text-academic-cream bg-transparent'
+                  }`}
+                >
+                  Brief Digest
+                </button>
+                <button
+                  onClick={() => setActiveTab('comprehensive')}
+                  className={`flex-1 text-center py-2 text-xs font-sans font-bold rounded-lg transition-colors border-0 cursor-pointer ${
+                    activeTab === 'comprehensive' 
+                      ? 'bg-academic-card text-academic-gold' 
+                      : 'text-academic-text-muted hover:text-academic-cream bg-transparent'
+                  }`}
+                >
+                  Comprehensive
+                </button>
+                <button
+                  onClick={() => setActiveTab('theorems')}
+                  className={`flex-1 text-center py-2 text-xs font-sans font-bold rounded-lg transition-colors border-0 cursor-pointer ${
+                    activeTab === 'theorems' 
+                      ? 'bg-academic-card text-academic-gold' 
+                      : 'text-academic-text-muted hover:text-academic-cream bg-transparent'
+                  }`}
+                >
+                  Theorems & Formulas
+                </button>
               </div>
-            )}
 
-            {activeTab === 'comprehensive' && (
-              <div className="space-y-6 font-serif">
-                {comprehensiveContent.map((sec, i) => (
-                  <div key={i} className="space-y-2">
-                    <h4 className="font-serif text-sm font-bold text-academic-gold">{sec.section}</h4>
-                    <p className="text-sm text-academic-cream/90 leading-relaxed pl-4 border-l border-academic-card/80">
-                      {sec.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {activeTab === 'theorems' && (
-              <div className="space-y-8">
-                {theoremsContent.map((th, i) => (
-                  <div key={i} className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Brain className="w-4 h-4 text-academic-gold" />
-                      <h4 className="font-serif text-sm font-bold text-academic-cream">{th.name}</h4>
+              {/* Active summary area */}
+              <div className="bg-academic-paper border border-academic-card p-6 md:p-8 rounded-xl min-h-[400px] gold-glow animate-fade-in">
+                {activeTab === 'brief' && (
+                  <div className="space-y-6 font-serif">
+                    <div>
+                      <h3 className="font-serif text-lg font-bold text-academic-cream">{briefContent.title}</h3>
+                      <div className="h-px bg-academic-card/50 my-3" />
                     </div>
 
-                    <div className="bg-academic-black border border-academic-card p-4 rounded-lg flex items-center justify-center text-center select-text selection:bg-academic-gold/20">
-                      <code className="font-mono text-xs text-academic-gold tracking-wide leading-relaxed">
-                        {th.formulation}
-                      </code>
+                    <div className="space-y-4">
+                      {briefContent.bullets.map((bullet, i) => (
+                        <div key={i} className="flex items-start gap-2.5 text-xs text-academic-cream/80 leading-relaxed font-sans">
+                          <span className="text-academic-gold mt-1">•</span>
+                          <span className="flex-1"><MathText text={bullet} className="inline" /></span>
+                        </div>
+                      ))}
                     </div>
 
-                    <p className="text-xs text-academic-text-muted leading-relaxed font-serif pl-6">
-                      <strong className="text-academic-cream font-sans">Semantic Implication:</strong> {th.implication}
+                    <p className="text-xs text-academic-text-muted leading-relaxed border-t border-academic-card/40 pt-4 italic">
+                      "{briefContent.summary}"
                     </p>
                   </div>
-                ))}
+                )}
+
+                {activeTab === 'comprehensive' && (
+                  <div className="space-y-6 font-serif">
+                    <div>
+                      <h3 className="font-serif text-lg font-bold text-academic-cream">Comprehensive Monograph Review</h3>
+                      <div className="h-px bg-academic-card/50 my-3" />
+                    </div>
+
+                    <div className="space-y-5">
+                      {comprehensiveContent.map((section, i) => (
+                        <div key={i} className="space-y-2">
+                          <h4 className="font-serif text-xs font-bold text-academic-gold uppercase tracking-wider">{section.section}</h4>
+                          <p className="text-xs text-academic-cream/80 leading-relaxed font-sans">{section.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'theorems' && (
+                  <div className="space-y-8">
+                    {theoremsContent.map((th, i) => (
+                      <div key={i} className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Brain className="w-4 h-4 text-academic-gold" />
+                          <h4 className="font-serif text-sm font-bold text-academic-cream">{th.name}</h4>
+                        </div>
+
+                        <div className="bg-academic-black border border-academic-card p-4 rounded-lg flex items-center justify-center text-center select-text selection:bg-academic-gold/20 w-full overflow-x-auto">
+                          <MathText text={th.formulation} className="text-academic-gold text-xs font-mono" />
+                        </div>
+
+                        <p className="text-xs text-academic-text-muted leading-relaxed font-serif pl-6">
+                          <strong className="text-academic-cream font-sans">Semantic Implication:</strong> {th.implication}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          ) : activeDoc?.summary ? (
+            /* Render dynamic custom RAG summary */
+            <div className="bg-academic-paper border border-academic-card p-6 md:p-8 rounded-xl min-h-[400px] gold-glow animate-fade-in space-y-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-academic-cream">Linguistic Abstract Digest</h3>
+                <p className="text-[10px] font-mono text-academic-text-muted mt-0.5">GENERATED BY AI RESEARCH REASONING</p>
+                <div className="h-px bg-academic-card/50 my-3" />
+              </div>
+              <div className="font-sans text-xs md:text-sm text-academic-cream/90 leading-relaxed whitespace-pre-wrap select-text selection:bg-academic-gold/20">
+                <MathText text={activeDoc.summary} className="w-full inline-block" />
+              </div>
+            </div>
+          ) : (
+            /* Render Generate placeholder for user uploaded documents */
+            <div className="bg-academic-paper border border-academic-card p-8 rounded-xl min-h-[400px] flex flex-col items-center justify-center text-center space-y-6 gold-glow">
+              <div className="w-16 h-16 rounded-full bg-academic-card border border-academic-gold/30 flex items-center justify-center mx-auto shadow-lg text-academic-gold">
+                <BookMarked className="w-8 h-8" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-serif text-xl font-bold text-academic-cream">No summary generated yet.</h3>
+                <p className="text-xs text-academic-text-muted font-serif max-w-sm mx-auto leading-relaxed">
+                  Generate a structured conceptual overview and mathematical brief directly from your custom document.
+                </p>
+              </div>
+
+              {generationError && (
+                <p className="text-xs text-academic-crimson-bright font-mono bg-academic-crimson/10 border border-academic-crimson/20 p-2 rounded">
+                  {generationError}
+                </p>
+              )}
+
+              {activeDoc ? (
+                <button
+                  onClick={handleGenerate}
+                  className="px-6 py-2.5 bg-academic-gold hover:bg-academic-gold-muted text-academic-black font-sans font-bold text-xs tracking-wider rounded-lg shadow-md transition-all cursor-pointer border-0"
+                >
+                  Generate Summary
+                </button>
+              ) : (
+                <p className="text-xs text-academic-text-muted italic">
+                  Select a registered document to generate summaries.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
