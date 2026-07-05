@@ -12,6 +12,8 @@ import {
   Sparkles
 } from 'lucide-react';
 
+import { MathText } from '../components/MathText';
+
 export const LearnMode: React.FC = () => {
   const { activeDoc } = useStudySphere();
   const navigate = useNavigate();
@@ -24,11 +26,13 @@ export const LearnMode: React.FC = () => {
       duration: '15 mins',
       concepts: ['Empirical Error', 'Feature Vectors', 'Least Squares'],
       content: `### 1.1 The Objective of Regression
-Linear regression seeks to establish a continuous mathematical mapping between an $D$-dimensional input feature vector $\\mathbf{x} \\in \\mathbb{R}^D$ and a scalar target variable $y \\in \\mathbb{R}$. The hypothesis is defined by parameter weights $\\mathbf{w}$ and a bias offset $b$:
+
+Linear regression seeks to establish a continuous mathematical mapping between a $D$-dimensional input feature vector $\\mathbf{x} \\in \\mathbb{R}^D$ and a scalar target variable $y \\in \\mathbb{R}$. The hypothesis is defined by parameter weights $\\mathbf{w}$ and a bias offset $b$:
 
 $$h_{\\mathbf{w}, b}(\\mathbf{x}) = \\mathbf{w}^T \\mathbf{x} + b = \\sum_{j=1}^D w_j x_j + b$$
 
 ### 1.2 Defining the Cost Topology
+
 To train our parameters, we must establish a performance metric. The standard Least Squares cost function evaluates the aggregate squared deviations across $N$ training samples:
 
 $$J(\\mathbf{w}, b) = \\frac{1}{2N} \\sum_{i=1}^N \\left( h_{\\mathbf{w}, b}(\\mathbf{x}^{(i)}) - y^{(i)} \\right)^2$$
@@ -45,11 +49,13 @@ This formulation yields a **convex** optimization bowl. This convexity guarantee
       duration: '20 mins',
       concepts: ['Gradient Vectors', 'Learning Rate', 'SGD Velocity'],
       content: `### 2.1 The Gradient Field
+
 To find the bottom of our loss bowl $J(\\mathbf{w})$, we evaluate the derivative vector with respect to each parameter. The gradient vector $\\nabla_{\\mathbf{w}} J(\\mathbf{w})$ indicates the direction of steepest ascent:
 
 $$\\nabla_{\\mathbf{w}} J(\\mathbf{w}) = \\frac{1}{N} \\sum_{i=1}^N \\left( \\mathbf{w}^T \\mathbf{x}^{(i)} - y^{(i)} \\right) \\mathbf{x}^{(i)}$$
 
 ### 2.2 Updating Parameters
+
 Under Gradient Descent, we update parameters in the opposite direction of the gradient, scaled by a learning rate $\\alpha > 0$:
 
 $$\\mathbf{w} \\leftarrow \\mathbf{w} - \\alpha \\nabla_{\\mathbf{w}} J(\\mathbf{w})$$
@@ -66,9 +72,11 @@ In Stochastic Gradient Descent (SGD), rather than evaluating the sum over all $N
       duration: '18 mins',
       concepts: ['Overfitting', 'Weight Decay', 'Diamond Boundaries'],
       content: `### 3.1 Overfitting and Complexity
+
 As models gain features, they tend to overfit—memorizing high-frequency training noise instead of underlying physics. To restrain this, we add a complexity penalty to our objective loss.
 
 ### 3.2 Regularization Mechanics
+
 1. **L1 Regularization (Lasso)**: Adds the sum of absolute weight magnitudes:
    $$J_{L1}(\\mathbf{w}) = J(\\mathbf{w}) + \\lambda \\sum_{j=1}^D |w_j|$$
    Due to the diamond contour shape of L1, the loss often hits exact zeroes on the axes, eliminating irrelevant features.
@@ -185,14 +193,12 @@ As models gain features, they tend to overfit—memorizing high-frequency traini
                 if (para.startsWith('###')) {
                   return (
                     <h3 key={i} className="font-serif text-lg font-bold text-academic-gold pt-3 border-l-2 border-academic-gold pl-3">
-                      {para.replace('###', '').trim()}
+                      <MathText text={para.replace('###', '').trim()} className="inline-block" />
                     </h3>
                   );
                 }
                 return (
-                  <p key={i} className="whitespace-pre-line">
-                    {para}
-                  </p>
+                  <MathText key={i} text={para} className="whitespace-pre-line" />
                 );
               })}
             </div>
@@ -203,9 +209,7 @@ As models gain features, they tend to overfit—memorizing high-frequency traini
                 <Bookmark className="w-4 h-4 text-academic-gold" />
                 Key Scholarly Insight
               </h4>
-              <p className="text-xs text-academic-cream/80 italic leading-relaxed pt-1 pl-5">
-                "{activeChapterData.takeaway}"
-              </p>
+              <MathText text={`"${activeChapterData.takeaway}"`} className="text-xs text-academic-cream/80 italic leading-relaxed pt-1 pl-5" />
             </div>
 
             {/* Complete module button action */}
@@ -236,7 +240,7 @@ As models gain features, they tend to overfit—memorizing high-frequency traini
               {activeChapterData.vocab.map((v, i) => (
                 <div key={i} className="bg-academic-dark border border-academic-card/50 p-4 rounded-lg">
                   <span className="text-xs font-bold text-academic-cream font-mono">{v.term}</span>
-                  <p className="text-[11px] text-academic-text-muted mt-1 leading-relaxed">{v.def}</p>
+                  <MathText text={v.def} className="text-[11px] text-academic-text-muted mt-1 leading-relaxed" />
                 </div>
               ))}
             </div>

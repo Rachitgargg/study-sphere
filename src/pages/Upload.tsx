@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useStudySphere } from '../context/StudySphereContext';
+import { uploadDocument } from '../lib/api';
 import { 
   UploadCloud, 
   FileText, 
@@ -29,53 +30,62 @@ export const Upload: React.FC = () => {
     }
   };
 
-  const simulateUpload = (fileName: string, fileSize: number) => {
+  const performActualUpload = async (file: File) => {
     setErrorMsg(null);
-    setUploadProgress(0);
+    setUploadProgress(10);
     setUploadStatus('Streaming bytes to secure repository...');
 
-    // Determine type
-    const extension = fileName.split('.').pop()?.toLowerCase();
+    const extension = file.name.split('.').pop()?.toLowerCase();
     const type = (['pdf', 'docx', 'txt', 'pptx'].includes(extension || '') 
       ? extension 
       : 'pdf') as 'pdf' | 'docx' | 'txt' | 'pptx';
 
-    // Format size
-    const sizeStr = fileSize > 1024 * 1024 
-      ? `${(fileSize / (1024 * 1024)).toFixed(1)} MB` 
-      : `${(fileSize / 1024).toFixed(0)} KB`;
+    const sizeStr = file.size > 1024 * 1024 
+      ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
+      : `${(file.size / 1024).toFixed(0)} KB`;
 
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 10;
-      setUploadProgress(progress);
-
-      if (progress === 30) {
-        setUploadStatus('Extracting textual layouts & tables...');
-      } else if (progress === 60) {
-        setUploadStatus('Running semantic chunking & embeddings...');
-      } else if (progress === 80) {
-        setUploadStatus('Extracting academic keywords & entities...');
-      } else if (progress >= 100) {
-        clearInterval(interval);
-        setUploadStatus('Tethering completed successfully!');
-        
-        // Add to our context
-        addDocument({
-          name: fileName,
-          size: sizeStr,
-          type,
-          pageCount: Math.floor(Math.random() * 20) + 5,
-          concepts: ['Auto-Extracted', 'Core Chapter', 'Scholarly Draft']
-        });
-
-        // Hide progress block after a brief delay
-        setTimeout(() => {
-          setUploadProgress(null);
-          setUploadStatus('');
-        }, 1500);
+    // Simulated visual progression for smooth UX
+    let progress = 10;
+    const progressInterval = setInterval(() => {
+      if (progress < 85) {
+        progress += 5;
+        setUploadProgress(progress);
+        if (progress === 30) {
+          setUploadStatus('Extracting textual layouts & tables...');
+        } else if (progress === 60) {
+          setUploadStatus('Running semantic chunking & embeddings...');
+        }
       }
-    }, 400);
+    }, 200);
+
+    try {
+      const result = await uploadDocument(file);
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      setUploadStatus(`Indexed successfully! Created ${result.chunks_created} chunks.`);
+      
+      addDocument({
+        id: result.file_id,
+        name: file.name,
+        size: sizeStr,
+        type,
+        status: 'processed',
+        pageCount: Math.floor(result.chunks_created / 3) + 1,
+        concepts: ['Vector DB', 'SentenceTransformers', 'ChromaDB']
+      });
+
+      // Hide progress block after a brief delay
+      setTimeout(() => {
+        setUploadProgress(null);
+        setUploadStatus('');
+      }, 2000);
+    } catch (err: any) {
+      clearInterval(progressInterval);
+      setUploadProgress(null);
+      setUploadStatus('');
+      setErrorMsg(err.message || 'Academic system connection failure. Check backend server.');
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -109,7 +119,7 @@ export const Upload: React.FC = () => {
       return;
     }
 
-    simulateUpload(file.name, file.size);
+    performActualUpload(file);
   };
 
   const triggerBrowse = () => {

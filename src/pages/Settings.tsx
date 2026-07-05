@@ -21,7 +21,8 @@ export const Settings: React.FC = () => {
     setAcademicLevel,
     clearChat,
     resetQuiz,
-    resetViva
+    resetViva,
+    resetStats
   } = useStudySphere();
 
   const navigate = useNavigate();
@@ -36,10 +37,8 @@ export const Settings: React.FC = () => {
   };
 
   const fullSystemReset = () => {
-    if (confirm("Are you sure you want to reset all progress, archived chat client transcripts, and custom documents?")) {
-      clearChat();
-      resetQuiz();
-      resetViva();
+    if (confirm("Are you sure you want to reset all progress, archived chat transcripts, stored documents, and study statistics?")) {
+      resetStats();
       setUsername('Alex');
       setAcademicLevel('Graduate (Computer Science)');
       setSuccessMsg('Archives and databases restored to default templates.');

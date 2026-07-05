@@ -1,15 +1,37 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Document, ChatMessage, QuizQuestion, Flashcard, VivaQuestion } from '../types';
-import { mockDocuments, mockChatMessages, mockQuizQuestions, mockFlashcards, mockVivaQuestions } from '../lib/mockData';
+
+interface AddDocumentInput {
+  name: string;
+  size: string;
+  type: 'pdf' | 'docx' | 'txt' | 'pptx';
+  id?: string;
+  status?: 'processed' | 'processing';
+  concepts?: string[];
+  pageCount?: number;
+}
 
 interface StudySphereContextType {
   documents: Document[];
-  addDocument: (doc: Omit<Document, 'id' | 'uploadDate' | 'status'>) => void;
+  addDocument: (doc: AddDocumentInput) => void;
   removeDocument: (id: string) => void;
   activeDoc: Document | null;
   setActiveDoc: (doc: Document | null) => void;
   chatMessages: ChatMessage[];
-  addChatMessage: (role: 'user' | 'assistant', content: string) => void;
+  addChatMessage: (
+    role: 'user' | 'assistant',
+    content: string,
+    mode?: string,
+    retrieved_context?: any[],
+    sources?: string[],
+    error?: boolean
+  ) => void;
+  updateLastChatMessage: (
+    content: string,
+    error?: boolean,
+    retrieved_context?: any[],
+    sources?: string[]
+  ) => void;
   clearChat: () => void;
   quizzes: QuizQuestion[];
   submitQuizAnswer: (questionId: string, answerIndex: number) => void;
@@ -27,21 +49,77 @@ interface StudySphereContextType {
   setAcademicLevel: (level: string) => void;
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
+  
+  // Real-time tracking
+  studyTime: number;
+  weeklyHours: { day: string; hours: number }[];
+  incrementStudyTime: (seconds: number) => void;
+  resetStats: () => void;
+  setQuizzes: React.Dispatch<React.SetStateAction<QuizQuestion[]>>;
+  setFlashcards: React.Dispatch<React.SetStateAction<Flashcard[]>>;
+  setVivaQuestions: React.Dispatch<React.SetStateAction<VivaQuestion[]>>;
 }
+
+const defaultWeeklyHours = [
+  { day: 'Mon', hours: 0 },
+  { day: 'Tue', hours: 0 },
+  { day: 'Wed', hours: 0 },
+  { day: 'Thu', hours: 0 },
+  { day: 'Fri', hours: 0 },
+  { day: 'Sat', hours: 0 },
+  { day: 'Sun', hours: 0 }
+];
 
 const StudySphereContext = createContext<StudySphereContextType | undefined>(undefined);
 
 export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [documents, setDocuments] = useState<Document[]>(mockDocuments);
-  const [activeDoc, setActiveDoc] = useState<Document | null>(mockDocuments[0]);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(mockChatMessages);
-  const [quizzes, setQuizzes] = useState<QuizQuestion[]>(mockQuizQuestions);
-  const [flashcards, setFlashcards] = useState<Flashcard[]>(mockFlashcards);
-  const [vivaQuestions, setVivaQuestions] = useState<VivaQuestion[]>(mockVivaQuestions);
+  // Load initial states from localStorage or empty defaults
+  const [documents, setDocuments] = useState<Document[]>(() => {
+    const saved = localStorage.getItem('study_sphere_documents');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [activeDoc, setActiveDoc] = useState<Document | null>(() => {
+    const saved = localStorage.getItem('study_sphere_active_doc');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
+    const saved = localStorage.getItem('study_sphere_chat_messages');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [quizzes, setQuizzes] = useState<QuizQuestion[]>([]);
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [vivaQuestions, setVivaQuestions] = useState<VivaQuestion[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [username, setUsername] = useState('Alex');
   const [academicLevel, setAcademicLevel] = useState('Graduate (Computer Science)');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Study stats states
+  const [studyTime, setStudyTime] = useState<number>(() => {
+    const saved = localStorage.getItem('study_sphere_study_time');
+    return saved ? parseInt(saved) : 0;
+  });
+
+  const [weeklyHours, setWeeklyHours] = useState<{ day: string; hours: number }[]>(() => {
+    const saved = localStorage.getItem('study_sphere_weekly_hours');
+    return saved ? JSON.parse(saved) : defaultWeeklyHours;
+  });
+
+  // Keep localStorage updated when lists change
+  useEffect(() => {
+    localStorage.setItem('study_sphere_documents', JSON.stringify(documents));
+  }, [documents]);
+
+  useEffect(() => {
+    localStorage.setItem('study_sphere_active_doc', activeDoc ? JSON.stringify(activeDoc) : '');
+  }, [activeDoc]);
+
+  useEffect(() => {
+    localStorage.setItem('study_sphere_chat_messages', JSON.stringify(chatMessages));
+  }, [chatMessages]);
 
   // Initialize active doc if null and docs are available
   useEffect(() => {
@@ -50,22 +128,76 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [documents, activeDoc]);
 
+  // Increment study time and log fraction to current day
+  const incrementStudyTime = (secs: number) => {
+    setStudyTime(prev => {
+      const newTime = prev + secs;
+      localStorage.setItem('study_sphere_study_time', String(newTime));
+      return newTime;
+    });
+
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const currentDayName = days[new Date().getDay()];
+
+    setWeeklyHours(prev => {
+      const newHours = prev.map(d => {
+        if (d.day === currentDayName) {
+          return { ...d, hours: parseFloat((d.hours + secs / 3600).toFixed(5)) };
+        }
+        return d;
+      });
+      localStorage.setItem('study_sphere_weekly_hours', JSON.stringify(newHours));
+      return newHours;
+    });
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible' && activeDoc) {
+        incrementStudyTime(1);
+      }
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [activeDoc]);
+
+  // Reset all stats completely
+  const resetStats = () => {
+    localStorage.removeItem('study_sphere_study_time');
+    localStorage.removeItem('study_sphere_weekly_hours');
+    localStorage.removeItem('study_sphere_documents');
+    localStorage.removeItem('study_sphere_active_doc');
+    localStorage.removeItem('study_sphere_chat_messages');
+    setStudyTime(0);
+    setWeeklyHours(defaultWeeklyHours);
+    setDocuments([]);
+    setActiveDoc(null);
+    setChatMessages([]);
+    setQuizzes([]);
+    setFlashcards([]);
+    setVivaQuestions([]);
+  };
+
   // Document actions
-  const addDocument = (newDoc: Omit<Document, 'id' | 'uploadDate' | 'status'>) => {
+  const addDocument = (newDoc: AddDocumentInput) => {
     const doc: Document = {
       ...newDoc,
-      id: `doc-${Date.now()}`,
+      id: newDoc.id || `doc-${Date.now()}`,
       uploadDate: 'Just now',
-      status: 'processing' // Starts processing, then "processes" after a delay!
+      status: newDoc.status || 'processing'
     };
     setDocuments(prev => [doc, ...prev]);
 
-    // Simulate processing completion after 5 seconds
-    setTimeout(() => {
-      setDocuments(prev => 
-        prev.map(d => d.id === doc.id ? { ...d, status: 'processed' } : d)
-      );
-    }, 5000);
+    // Simulate processing completion only if status is processing
+    if (doc.status === 'processing') {
+      setTimeout(() => {
+        setDocuments(prev => 
+          prev.map(d => d.id === doc.id ? { ...d, status: 'processed' } : d)
+        );
+      }, 5000);
+    }
   };
 
   const removeDocument = (id: string) => {
@@ -76,14 +208,47 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   // Chat actions
-  const addChatMessage = (role: 'user' | 'assistant', content: string) => {
+  const addChatMessage = (
+    role: 'user' | 'assistant',
+    content: string,
+    mode?: string,
+    retrieved_context?: any[],
+    sources?: string[],
+    error?: boolean
+  ) => {
     const newMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
       role,
       content,
-      timestamp: 'Just now'
+      timestamp: 'Just now',
+      mode,
+      retrieved_context,
+      sources,
+      error
     };
     setChatMessages(prev => [...prev, newMessage]);
+  };
+
+  const updateLastChatMessage = (
+    content: string,
+    error?: boolean,
+    retrieved_context?: any[],
+    sources?: string[]
+  ) => {
+    setChatMessages(prev => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      if (last.role !== 'assistant') return prev;
+      const copy = [...prev];
+      copy[copy.length - 1] = {
+        ...last,
+        content,
+        error: error !== undefined ? error : last.error,
+        retrieved_context: retrieved_context !== undefined ? retrieved_context : last.retrieved_context,
+        sources: sources !== undefined ? sources : last.sources
+      };
+      return copy;
+    });
   };
 
   const clearChat = () => {
@@ -136,6 +301,7 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
         setActiveDoc,
         chatMessages,
         addChatMessage,
+        updateLastChatMessage,
         clearChat,
         quizzes,
         submitQuizAnswer,
@@ -152,7 +318,14 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
         academicLevel,
         setAcademicLevel,
         isSidebarOpen,
-        setIsSidebarOpen
+        setIsSidebarOpen,
+        studyTime,
+        weeklyHours,
+        incrementStudyTime,
+        resetStats,
+        setQuizzes,
+        setFlashcards,
+        setVivaQuestions
       }}
     >
       {children}

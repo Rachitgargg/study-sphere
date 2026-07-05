@@ -15,6 +15,10 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  mode?: string;
+  retrieved_context?: any[];
+  sources?: string[];
+  error?: boolean;
 }
 
 export interface QuizQuestion {

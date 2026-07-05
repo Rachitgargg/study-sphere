@@ -20,43 +20,41 @@ export const Dashboard: React.FC = () => {
     documents, 
     activeDoc, 
     setActiveDoc, 
-    username 
+    username,
+    studyTime,
+    weeklyHours
   } = useStudySphere();
 
   const navigate = useNavigate();
 
-  // Weekly study data for custom SVG chart
-  const weeklyHours = [
-    { day: 'Mon', hours: 1.5 },
-    { day: 'Tue', hours: 3.2 },
-    { day: 'Wed', hours: 2.0 },
-    { day: 'Thu', hours: 4.5 },
-    { day: 'Fri', hours: 3.8 },
-    { day: 'Sat', hours: 2.5 },
-    { day: 'Sun', hours: 1.0 }
-  ];
-
-  const maxHours = Math.max(...weeklyHours.map(d => d.hours));
+  const totalTrackedHours = weeklyHours.reduce((sum, entry) => sum + entry.hours, 0);
+  const maxHours = Math.max(...weeklyHours.map(d => d.hours), 1);
+  const streakDays = weeklyHours.filter(entry => entry.hours > 0).length;
+  const totalHoursDisplay = (studyTime / 3600).toFixed(1);
+  const latestIndex = weeklyHours.length - 1;
+  const yesterdayHours = weeklyHours[latestIndex - 1]?.hours ?? 0;
+  const todayHours = weeklyHours[latestIndex]?.hours ?? 0;
+  const hourDelta = todayHours - yesterdayHours;
 
   const stats = [
     { 
       label: 'Intellective Hours', 
-      value: '18.5 Hrs', 
-      desc: '+1.4h since yesterday', 
+      value: `${totalHoursDisplay} Hrs`, 
+      desc: `${hourDelta >= 0 ? '+' : ''}${hourDelta.toFixed(1)}h since yesterday`, 
       icon: Clock, 
       color: 'text-academic-gold bg-academic-gold/5 border-academic-gold/15' 
     },
     { 
       label: 'Study Session Streak', 
-      value: '5 Days', 
-      desc: 'Top 5% of scholars', 
+      value: `${streakDays} Days`, 
+      desc: 'Active learning streak', 
       icon: Flame, 
       color: 'text-academic-crimson-bright bg-academic-crimson/10 border-academic-crimson/20' 
     },
     { 
       label: 'Cataloged Codices', 
       value: `${documents.length} Files`, 
-      desc: 'Active bibliography', 
+      desc: documents.length ? 'Active bibliography' : 'No material uploaded', 
       icon: BookOpen, 
       color: 'text-academic-emerald-bright bg-academic-emerald/10 border-academic-emerald/20' 
     },
@@ -139,10 +137,10 @@ export const Dashboard: React.FC = () => {
                 <div key={idx} className="flex flex-col items-center flex-1 group">
                   {/* Tooltip */}
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-academic-black border border-academic-gold/30 px-2 py-0.5 rounded text-[10px] font-mono text-academic-gold mb-2 pointer-events-none shadow-xl transform -translate-y-1">
-                    {data.hours}h
+                    {data.hours.toFixed(1)}h
                   </div>
                   {/* Bar */}
-                  <div className="w-10 rounded-t-md bg-academic-card border border-academic-card/80 group-hover:border-academic-gold/50 group-hover:bg-gradient-to-t group-hover:from-academic-gold/10 group-hover:to-academic-gold/30 transition-all cursor-pointer relative flex justify-center overflow-hidden" style={{ height: `${Math.max(heightPercent, 5)}%` }}>
+                  <div className="w-10 rounded-t-md bg-academic-card border border-academic-card/80 group-hover:border-academic-gold/50 group-hover:bg-gradient-to-t group-hover:from-academic-gold/10 group-hover:to-academic-gold/30 transition-all cursor-pointer relative flex justify-center overflow-hidden" style={{ height: `${Math.max(heightPercent, 8)}%` }}>
                     <div className="absolute bottom-0 w-full h-1 bg-academic-gold" />
                   </div>
                   {/* Label */}
