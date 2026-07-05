@@ -21,7 +21,6 @@ export const Settings: React.FC = () => {
     setAcademicLevel,
     clearChat,
     resetQuiz,
-    resetViva,
     resetStats,
     resetOnboarding
   } = useStudySphere();

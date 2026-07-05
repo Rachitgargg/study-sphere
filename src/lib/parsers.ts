@@ -1,4 +1,4 @@
-import { QuizQuestion, Flashcard, VivaQuestion } from '../types';
+import { QuizQuestion, Flashcard } from '../types';
 
 export interface ParsedQuizQuestion extends QuizQuestion {
   showAnswer?: boolean;
@@ -116,52 +116,3 @@ export function parseFlashcards(text: string): ParsedFlashcard[] {
   return cards;
 }
 
-export function parseViva(text: string): VivaQuestion[] {
-  if (!text || typeof text !== 'string') return [];
-  
-  const questions: VivaQuestion[] = [];
-  try {
-    // split blocks by numbers: e.g. 1. or 2)
-    const rawBlocks = text.split(/(?=(?:^\d+|\n\d+)[\.\)]\s)/gi);
-    
-    rawBlocks.forEach((block, index) => {
-      const trimmed = block.trim();
-      if (!trimmed) return;
-      
-      const qMatch = trimmed.match(/^(?:\d+[\.\)]\s*)(.*?)(?:\n|$)/is);
-      const question = qMatch ? qMatch[1].trim() : trimmed;
-      
-      if (question.length > 5) {
-        // Extract expected keywords from the question itself as a fallback
-        const stopWords = new Set(['what', 'why', 'how', 'explain', 'describe', 'define', 'the', 'and', 'are', 'you', 'your', 'for', 'with', 'from', 'that', 'this', 'these', 'those', 'their', 'them', 'they', 'have', 'has', 'had', 'does', 'doing', 'done', 'about', 'above', 'under', 'below', 'between', 'is', 'a', 'an', 'in', 'on', 'at', 'by', 'of', 'to']);
-        const words = question.toLowerCase().replace(/[^a-zA-Z0-9\s]/g, '').split(/\s+/);
-        const expectedKeywords = Array.from(new Set(words.filter(w => w.length > 3 && !stopWords.has(w)))).slice(0, 6);
-        
-        questions.push({
-          id: `viva-${index}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          question,
-          expectedKeywords: expectedKeywords.length > 0 ? expectedKeywords : ['concepts', 'definitions', 'theory']
-        });
-      }
-    });
-    
-    // Fallback: If parsing didn't find numbered list items, split by newlines and treat each non-empty line as a question
-    if (questions.length === 0) {
-      const lines = text.split('\n');
-      lines.forEach((line, index) => {
-        const trimmed = line.trim().replace(/^[\*\-\d\.\)\s]+/, '');
-        if (trimmed.length > 10) {
-          questions.push({
-            id: `viva-fallback-${index}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-            question: trimmed,
-            expectedKeywords: ['understanding', 'analysis', 'details']
-          });
-        }
-      });
-    }
-  } catch (err) {
-    console.error('[parsers] parseViva failed:', err);
-  }
-  
-  return questions;
-}

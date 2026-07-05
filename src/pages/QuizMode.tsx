@@ -38,8 +38,8 @@ export const QuizMode: React.FC = () => {
     setGenerationError(null);
     try {
       const finalSize = isCustomQuiz ? Math.max(1, Math.min(50, parseInt(customQuizSize) || 10)) : parseInt(quizSize);
-      // Format a history-aware query to enable concept diversity
       let prompt = `Generate a multiple-choice quiz (MCQ) containing exactly ${finalSize} questions based on the provided document contexts. `;
+      prompt += `Cover distinct concepts, avoid repeating the same topic or wording, and make each question add new coverage across the document. `;
       prompt += `Each question should have options A, B, C, D and explicitly state the correct answer as 'Answer: [A/B/C/D]'. Provide a short explanation under 'Explanation:'.`;
       const result = await sendChatMessage(prompt, 'quiz');
       const parsed = parseQuiz(result.answer);

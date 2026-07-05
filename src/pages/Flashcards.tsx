@@ -36,8 +36,8 @@ export const Flashcards: React.FC = () => {
     setGenerationError(null);
     try {
       const finalCount = isCustomFlashcard ? Math.max(1, Math.min(50, parseInt(customFlashcardCount) || 15)) : parseInt(flashcardCount);
-      // Format a history-aware query to enable concept diversity
       let prompt = `Generate a set of study flashcards containing exactly ${finalCount} cards based on the provided document contexts. `;
+      prompt += `Distribute the cards across different concepts and avoid repeated wording or repeated concepts within the same deck. `;
       prompt += `Maintain the strict formatting of 'Card 1:\nFront: [Question/Concept]\nBack: [Brief, precise explanation/answer]'.`;
       const result = await sendChatMessage(prompt, 'flashcards');
       const parsed = parseFlashcards(result.answer);

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Document, ChatMessage, QuizQuestion, Flashcard, VivaQuestion } from '../types';
-import { mockDocuments, mockFlashcards, mockQuizQuestions, mockVivaQuestions } from '../lib/mockData';
+import { Document, ChatMessage, QuizQuestion, Flashcard } from '../types';
+import { mockDocuments, mockFlashcards, mockQuizQuestions } from '../lib/mockData';
 
 interface AddDocumentInput {
   name: string;
@@ -40,9 +40,6 @@ interface StudySphereContextType {
   resetQuiz: () => void;
   flashcards: Flashcard[];
   updateFlashcardDifficulty: (id: string, difficulty: 'easy' | 'medium' | 'hard') => void;
-  vivaQuestions: VivaQuestion[];
-  submitVivaAnswer: (id: string, answerAudio: string, feedback: any) => void;
-  resetViva: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   username: string;
@@ -62,7 +59,6 @@ interface StudySphereContextType {
   resetStats: () => void;
   setQuizzes: React.Dispatch<React.SetStateAction<QuizQuestion[]>>;
   setFlashcards: React.Dispatch<React.SetStateAction<Flashcard[]>>;
-  setVivaQuestions: React.Dispatch<React.SetStateAction<VivaQuestion[]>>;
 }
 
 const defaultWeeklyHours = [
@@ -106,13 +102,6 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const parsedDoc = savedDoc ? JSON.parse(savedDoc) : null;
     const docId = parsedDoc ? parsedDoc.id : (mockDocuments[0]?.id || '');
     return docId === 'doc-1' ? mockFlashcards : [];
-  });
-
-  const [vivaQuestions, setVivaQuestions] = useState<VivaQuestion[]>(() => {
-    const savedDoc = localStorage.getItem('study_sphere_active_doc');
-    const parsedDoc = savedDoc ? JSON.parse(savedDoc) : null;
-    const docId = parsedDoc ? parsedDoc.id : (mockDocuments[0]?.id || '');
-    return docId === 'doc-1' ? mockVivaQuestions : [];
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [username, setUsername] = useState<string>(() => {
@@ -171,11 +160,9 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
       if (activeDoc.id === 'doc-1') {
         setQuizzes(mockQuizQuestions);
         setFlashcards(mockFlashcards);
-        setVivaQuestions(mockVivaQuestions);
       } else {
         setQuizzes([]);
         setFlashcards([]);
-        setVivaQuestions([]);
       }
     }
   }, [activeDoc]);
@@ -229,7 +216,6 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setChatMessages([]);
     setQuizzes([]);
     setFlashcards([]);
-    setVivaQuestions([]);
   };
 
   const resetOnboarding = () => {
@@ -346,17 +332,6 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
     );
   };
 
-  // Viva actions
-  const submitVivaAnswer = (id: string, answerAudio: string, feedback: any) => {
-    setVivaQuestions(prev => 
-      prev.map(q => q.id === id ? { ...q, userAnswerAudio: answerAudio, feedback } : q)
-    );
-  };
-
-  const resetViva = () => {
-    setVivaQuestions(prev => prev.map(q => ({ ...q, userAnswerAudio: undefined, feedback: undefined })));
-  };
-
   return (
     <StudySphereContext.Provider
       value={{
@@ -374,9 +349,6 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
         resetQuiz,
         flashcards,
         updateFlashcardDifficulty,
-        vivaQuestions,
-        submitVivaAnswer,
-        resetViva,
         searchQuery,
         setSearchQuery,
         username,
@@ -391,7 +363,6 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
         resetStats,
         setQuizzes,
         setFlashcards,
-        setVivaQuestions,
         updateDocumentSummary,
         onboardingComplete,
         setOnboardingComplete,

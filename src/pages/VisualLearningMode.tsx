@@ -49,10 +49,10 @@ export const VisualLearningMode: React.FC = () => {
     setGenerationError(null);
     try {
       const prompt = (
-        `Generate a detailed visual learning diagram mapping out the core processes, timelines, ` +
-        `hierarchies, or flowcharts of the active document context. ` +
-        `ALWAYS render visual layouts using Mermaid syntax blocks (e.g. \`\`\`mermaid ... \`\`\`). ` +
-        `If Mermaid is not appropriate for the concept, construct clean ASCII text flowcharts instead.`
+        `Generate a detailed visual learning artifact for the active document that includes one or more of the following: ` +
+        `a Mermaid diagram, a text flowchart, a concept map, a process diagram, a timeline, a hierarchy diagram, ` +
+        `a decision tree, or a comparison table. Prefer Mermaid for node-link structures and use a fenced text or ascii block ` +
+        `for fallback flowcharts when Mermaid is not appropriate. Keep the output educational, concise, and directly tied to the document context.`
       );
       const result = await sendChatMessage(prompt, 'visual_learning');
       if (result.answer) {
@@ -90,7 +90,7 @@ export const VisualLearningMode: React.FC = () => {
       <div className="bg-indigo-950/20 border border-indigo-500/20 p-4 rounded-xl flex items-start gap-3 text-xs text-indigo-300 font-sans">
         <Info className="w-4.5 h-4.5 text-indigo-400 mt-0.5 flex-shrink-0" />
         <span>
-          <strong>Visual Learning Mode:</strong> Visual Learning explains concepts using diagrams, flowcharts and structured visual representations.
+          <strong>Visual Learning Mode:</strong> Visual Learning explains concepts using Mermaid diagrams, text flowcharts, concept maps, process diagrams, timelines, hierarchy diagrams, decision trees, and comparison tables.
         </span>
       </div>
 

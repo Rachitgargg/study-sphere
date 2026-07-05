@@ -1,4 +1,4 @@
-import { Document, ChatMessage, QuizQuestion, Flashcard, ConceptNode, ConceptLink, VivaQuestion } from '../types';
+import { Document, ChatMessage, QuizQuestion, Flashcard, ConceptNode, ConceptLink } from '../types';
 
 export const mockDocuments: Document[] = [
   {
@@ -198,19 +198,6 @@ export const mockFlashcards: Flashcard[] = [
     back: 'The process of splitting a continuous stream of text into individual units or semantic tokens (such as words, subwords, or characters) suitable for parsing and modeling.',
     category: 'NLP',
     difficulty: 'easy'
-  }
-];
-
-export const mockVivaQuestions: VivaQuestion[] = [
-  {
-    id: 'v-1',
-    question: 'Explain what Gradient Descent is, and how Stochastic Gradient Descent (SGD) differs from Batch Gradient Descent.',
-    expectedKeywords: ['gradient', 'derivative', 'batch', 'stochastic', 'computation', 'local minimum', 'iterations']
-  },
-  {
-    id: 'v-2',
-    question: 'Explain the concept of "Markov Decision Processes" (MDPs). What are the key elements of an MDP?',
-    expectedKeywords: ['state', 'action', 'transition probability', 'reward', 'discount factor', 'policy']
   }
 ];
 

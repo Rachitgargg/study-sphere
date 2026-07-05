@@ -15,8 +15,8 @@ interface MathTextProps {
 export const MathText: React.FC<MathTextProps> = ({ text, className = '' }) => {
   if (!text) return null;
 
-  // Split text by mermaid code blocks: ```mermaid [content] ```
-  const parts = text.split(/(```mermaid[\s\S]*?```)/g);
+  // Split text by fenced code blocks so Mermaid and text-based fallback diagrams render cleanly.
+  const parts = text.split(/(```[\w-]*[\s\S]*?```)/g);
 
   return (
     <div className={className}>
@@ -24,6 +24,15 @@ export const MathText: React.FC<MathTextProps> = ({ text, className = '' }) => {
         if (part.startsWith('```mermaid') && part.endsWith('```')) {
           const chart = part.replace(/^```mermaid\s*/i, '').replace(/```$/, '').trim();
           return <Mermaid key={idx} chart={chart} />;
+        }
+
+        if (part.startsWith('```') && part.endsWith('```')) {
+          const codeBlock = part.replace(/^```[\w-]*\s*/i, '').replace(/```$/, '').trim();
+          return (
+            <pre key={idx} className="my-3 overflow-x-auto rounded-lg border border-academic-card bg-academic-black/80 p-3 text-[11px] leading-relaxed text-academic-cream/90 whitespace-pre-wrap font-mono">
+              <code>{codeBlock}</code>
+            </pre>
+          );
         }
         
         // Otherwise render standard math text

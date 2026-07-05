@@ -53,15 +53,3 @@ export interface ConceptLink {
   type?: string;
 }
 
-export interface VivaQuestion {
-  id: string;
-  question: string;
-  expectedKeywords: string[];
-  userAnswerAudio?: string;
-  feedback?: {
-    score: number; // 0-100
-    strengths: string[];
-    gaps: string[];
-    suggestedAnswer: string;
-  };
-}
