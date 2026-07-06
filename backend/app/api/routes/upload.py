@@ -93,10 +93,10 @@ async def upload_file(file: UploadFile = File(...)):
             detail=f"Failed to partition text into chunks: {str(e)}"
         )
         
-    # 4. Save chunks to Vector Store (ChromaDB + SentenceTransformers)
+    # 4. Save chunks to Vector Store (ChromaDB + Cloud Embeddings)
     db_start = time.time()
     try:
-        vector_store.add_documents(chunks)
+        await vector_store.add_documents(chunks)
         db_duration = time.time() - db_start
         logger.info(f"[Upload] Indexed document chunks in vector database in {db_duration:.4f}s.")
     except Exception as e:

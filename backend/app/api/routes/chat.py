@@ -28,7 +28,7 @@ async def chat(request: ChatRequest):
         source_file = request.document_ids[0]
         
     try:
-        retrieved_chunks = vector_store.search(request.message, k=5, source_file=source_file)
+        retrieved_chunks = await vector_store.search(request.message, k=5, source_file=source_file)
     except Exception as e:
         logger.error(f"[Chat] Vector store search failed: {str(e)}")
         raise HTTPException(

@@ -1,11 +1,11 @@
 """
 Vector store service for StudySphere AI.
-Integrates persistent ChromaDB storage and HuggingFace SentenceTransformers embeddings.
+Integrates persistent ChromaDB storage and cloud-based embedding API services.
 """
 import os
-import functools
 from typing import List, Dict, Any
 from app.core.config import settings
+from app.services.embedding_service import embedding_service
 
 class VectorStore:
     def __init__(self):
@@ -14,8 +14,9 @@ class VectorStore:
         self.persistent = True
         self._client = None
         self._collection = None
-        self._model = None
-        print(f"[VectorStore] Placeholder initialized at db path: {self.db_path}")
+        self._query_cache = {}
+        self._migration_done = False
+        print(f"[VectorStore] Initialized at db path: {self.db_path}")
 
     @property
     def client(self):
@@ -48,33 +49,80 @@ class VectorStore:
         return self._client
 
     @property
+    def collection_name(self) -> str:
+        provider = settings.detected_provider
+        model = settings.detected_model.replace("/", "_").replace("-", "_")
+        return f"studysphere_{provider}_{model}"
+
+    @property
     def collection(self):
         if self._collection is None:
+            name = self.collection_name
+            print(f"[VectorStore] Initializing ChromaDB collection: {name}")
             self._collection = self.client.get_or_create_collection(
-                name="studysphere_chunks",
+                name=name,
                 metadata={"hnsw:space": "cosine"} # Use cosine similarity
             )
         return self._collection
 
-    @property
-    def model(self):
-        if self._model is None:
-            print(f"[VectorStore] Lazy loading SentenceTransformer model: {settings.EMBEDDING_MODEL_NAME}...")
-            from sentence_transformers import SentenceTransformer
-            self._model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
-            print(f"[VectorStore] Loaded model: {settings.EMBEDDING_MODEL_NAME}")
-        return self._model
+    async def _check_and_migrate(self):
+        try:
+            # Check if old collection exists
+            collections = [c.name for c in self.client.list_collections()]
+            if "studysphere_chunks" in collections:
+                old_collection = self.client.get_collection(name="studysphere_chunks")
+                results = old_collection.get(include=["documents", "metadatas"])
+                if results and "documents" in results and results["documents"]:
+                    documents = results["documents"]
+                    metadatas = results["metadatas"]
+                    
+                    print(f"[VectorStore] Migration started. Found {len(documents)} existing chunks in 'studysphere_chunks' collection.")
+                    
+                    chunks_to_migrate = []
+                    for i in range(len(documents)):
+                        meta = metadatas[i]
+                        chunks_to_migrate.append({
+                            "text": documents[i],
+                            "chunk_id": int(meta.get("chunk_id", i)),
+                            "metadata": {
+                                "source_file": meta.get("source_file", "unknown"),
+                                "start_index": int(meta.get("start_index", 0)),
+                                "end_index": int(meta.get("end_index", 0))
+                            }
+                        })
+                    
+                    # Prevent recursive migration loop by setting flag first
+                    self._migration_done = True
+                    await self._add_documents_internal(chunks_to_migrate)
+                    print(f"[VectorStore] Successfully migrated {len(documents)} chunks to new collection: {self.collection_name}.")
+                    
+                    self.client.delete_collection("studysphere_chunks")
+                    print("[VectorStore] Deleted old 'studysphere_chunks' collection.")
+                else:
+                    self.client.delete_collection("studysphere_chunks")
+                    self._migration_done = True
+                    print("[VectorStore] Deleted empty old 'studysphere_chunks' collection.")
+            else:
+                self._migration_done = True
+        except Exception as e:
+            print(f"[VectorStore] Error during migration: {str(e)}")
+            # Even if migration fails, mark it done to prevent infinite loops / constant failures
+            self._migration_done = True
 
-    def add_documents(self, chunks: List[Dict[str, Any]]) -> bool:
+    async def add_documents(self, chunks: List[Dict[str, Any]]) -> bool:
         """
         Generates embeddings for document chunks and inserts/updates them in ChromaDB.
-        Each chunk is stored with its text, id, and source metadata.
+        Runs migration if necessary before adding documents.
         """
+        if not self._migration_done:
+            await self._check_and_migrate()
+        return await self._add_documents_internal(chunks)
+
+    async def _add_documents_internal(self, chunks: List[Dict[str, Any]]) -> bool:
         if not chunks:
             return True
             
         ids = []
-        embeddings = []
         documents = []
         metadatas = []
         texts_to_embed = []
@@ -100,9 +148,8 @@ class VectorStore:
             texts_to_embed.append(chunk["text"])
             
         try:
-            # Generate embeddings locally
-            # encode returns a numpy array, which is converted to list of floats
-            embeddings = self.model.encode(texts_to_embed).tolist()
+            # Generate embeddings via the cloud embedding service
+            embeddings = await embedding_service.get_embeddings(texts_to_embed)
             
             # Insert into ChromaDB collection
             self.collection.add(
@@ -111,27 +158,40 @@ class VectorStore:
                 documents=documents,
                 metadatas=metadatas
             )
-            print(f"[VectorStore] Indexed {len(chunks)} chunks in ChromaDB.")
+            print(f"[VectorStore] Indexed {len(chunks)} chunks in ChromaDB (collection: {self.collection_name}).")
             return True
         except Exception as e:
             print(f"[VectorStore] Error indexing documents: {str(e)}")
             raise e
 
-    @functools.lru_cache(maxsize=128)
-    def _get_query_embedding(self, query: str) -> List[float]:
+    async def _get_query_embedding(self, query: str) -> List[float]:
         """Compute query embedding, cached for performance."""
-        return self.model.encode(query).tolist()
+        if query in self._query_cache:
+            return self._query_cache[query]
+            
+        embedding = await embedding_service.get_query_embedding(query)
+        
+        # Simple cache eviction if it grows too large
+        if len(self._query_cache) >= 128:
+            # Remove the oldest cached item (FIFO)
+            self._query_cache.pop(next(iter(self._query_cache)))
+            
+        self._query_cache[query] = embedding
+        return embedding
 
-    def search(self, query: str, k: int = 5, source_file: str = None) -> List[Dict[str, Any]]:
+    async def search(self, query: str, k: int = 5, source_file: str = None) -> List[Dict[str, Any]]:
         """
         Embeds the search query and retrieves the top-k most semantically relevant chunks.
         """
         if not query:
             return []
             
+        if not self._migration_done:
+            await self._check_and_migrate()
+            
         try:
-            # Embed the query (utilizes local LRU cache)
-            query_embedding = self._get_query_embedding(query)
+            # Embed the query (utilizes async local cache)
+            query_embedding = await self._get_query_embedding(query)
             
             where_clause = None
             if source_file:
@@ -149,13 +209,10 @@ class VectorStore:
                 ids = results["ids"][0]
                 documents = results["documents"][0]
                 metadatas = results["metadatas"][0]
-                # Cosine distance (0.0 to 2.0). Score = 1.0 - distance to estimate similarity score
                 distances = results["distances"][0] if "distances" in results else [1.0] * len(ids)
                 
                 for i in range(len(ids)):
-                    # Distance is L2/cosine distance.
-                    # With cosine distance, 0 means identical, 1 means orthogonal.
-                    # We return the score directly or normalize it. Let's return similarity score (1.0 - distance)
+                    # Distance is cosine distance (0 to 2). Score = 1.0 - distance
                     score = 1.0 - distances[i]
                     
                     formatted_results.append({
@@ -174,5 +231,5 @@ class VectorStore:
             print(f"[VectorStore] Error during similarity search: {str(e)}")
             return []
 
-# Singleton instance to prevent multiple model loads
+# Singleton instance
 vector_store = VectorStore()
