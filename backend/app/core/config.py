@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     
     # Embedding settings
     EMBEDDING_PROVIDER: str = "gemini"
-    EMBEDDING_MODEL_NAME: str = "gemini-embedding-2"
+    EMBEDDING_MODEL_NAME: str = "gemini-embedding-001"
     
     VECTOR_DB_DIR: str = "vector_db"
 
@@ -29,7 +29,10 @@ class Settings(BaseSettings):
 
     @property
     def detected_model(self) -> str:
-        return self.EMBEDDING_MODEL_NAME or "gemini-embedding-2"
+        model_name = self.EMBEDDING_MODEL_NAME
+        if not model_name or "sentence-transformers" in model_name or "all-MiniLM" in model_name:
+            return "gemini-embedding-001"
+        return model_name
 
     class Config:
         env_file = ".env"

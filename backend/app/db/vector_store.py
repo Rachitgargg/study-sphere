@@ -67,43 +67,45 @@ class VectorStore:
 
     async def _check_and_migrate(self):
         try:
-            # Check if old collection exists
+            # Check if old collections exist
             collections = [c.name for c in self.client.list_collections()]
-            if "studysphere_chunks" in collections:
-                old_collection = self.client.get_collection(name="studysphere_chunks")
-                results = old_collection.get(include=["documents", "metadatas"])
-                if results and "documents" in results and results["documents"]:
-                    documents = results["documents"]
-                    metadatas = results["metadatas"]
-                    
-                    print(f"[VectorStore] Migration started. Found {len(documents)} existing chunks in 'studysphere_chunks' collection.")
-                    
-                    chunks_to_migrate = []
-                    for i in range(len(documents)):
-                        meta = metadatas[i]
-                        chunks_to_migrate.append({
-                            "text": documents[i],
-                            "chunk_id": int(meta.get("chunk_id", i)),
-                            "metadata": {
-                                "source_file": meta.get("source_file", "unknown"),
-                                "start_index": int(meta.get("start_index", 0)),
-                                "end_index": int(meta.get("end_index", 0))
-                            }
-                        })
-                    
-                    # Prevent recursive migration loop by setting flag first
-                    self._migration_done = True
-                    await self._add_documents_internal(chunks_to_migrate)
-                    print(f"[VectorStore] Successfully migrated {len(documents)} chunks to new collection: {self.collection_name}.")
-                    
-                    self.client.delete_collection("studysphere_chunks")
-                    print("[VectorStore] Deleted old 'studysphere_chunks' collection.")
-                else:
-                    self.client.delete_collection("studysphere_chunks")
-                    self._migration_done = True
-                    print("[VectorStore] Deleted empty old 'studysphere_chunks' collection.")
-            else:
-                self._migration_done = True
+            target_name = self.collection_name
+            
+            for old_name in ["studysphere_chunks", "studysphere_gemini_gemini_embedding_2"]:
+                if old_name in collections and old_name != target_name:
+                    old_collection = self.client.get_collection(name=old_name)
+                    results = old_collection.get(include=["documents", "metadatas"])
+                    if results and "documents" in results and results["documents"]:
+                        documents = results["documents"]
+                        metadatas = results["metadatas"]
+                        
+                        print(f"[VectorStore] Migration started from '{old_name}' to '{target_name}'. Found {len(documents)} existing chunks.")
+                        
+                        chunks_to_migrate = []
+                        for i in range(len(documents)):
+                            meta = metadatas[i]
+                            chunks_to_migrate.append({
+                                "text": documents[i],
+                                "chunk_id": int(meta.get("chunk_id", i)),
+                                "metadata": {
+                                    "source_file": meta.get("source_file", "unknown"),
+                                    "start_index": int(meta.get("start_index", 0)),
+                                    "end_index": int(meta.get("end_index", 0))
+                                }
+                            })
+                        
+                        # Prevent recursive migration loop by setting flag first
+                        self._migration_done = True
+                        await self._add_documents_internal(chunks_to_migrate)
+                        print(f"[VectorStore] Successfully migrated {len(documents)} chunks to new collection: {target_name}.")
+                        
+                        self.client.delete_collection(old_name)
+                        print(f"[VectorStore] Deleted old '{old_name}' collection.")
+                    else:
+                        self.client.delete_collection(old_name)
+                        print(f"[VectorStore] Deleted empty old '{old_name}' collection.")
+            
+            self._migration_done = True
         except Exception as e:
             print(f"[VectorStore] Error during migration: {str(e)}")
             # Even if migration fails, mark it done to prevent infinite loops / constant failures

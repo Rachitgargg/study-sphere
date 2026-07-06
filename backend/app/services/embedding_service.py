@@ -29,7 +29,7 @@ class EmbeddingService:
             raise ValueError("GEMINI_API_KEY is not configured in environment variables.")
 
         # Construct request URL and headers
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:batchEmbedContents"
+        url = f"https://generativelanguage.googleapis.com/v1/models/{self.model}:batchEmbedContents"
         headers = {
             "x-goog-api-key": gemini_api_key,
             "Content-Type": "application/json"
