@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Document, ChatMessage, QuizQuestion, Flashcard } from '../types';
-import { mockDocuments, mockFlashcards, mockQuizQuestions } from '../lib/mockData';
+
 
 interface AddDocumentInput {
   name: string;
@@ -79,32 +79,17 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
   // Load initial states from localStorage or empty defaults
   const [documents, setDocuments] = useState<Document[]>(() => {
     const saved = localStorage.getItem('study_sphere_documents');
-    return saved ? JSON.parse(saved) : mockDocuments;
+    return saved ? JSON.parse(saved) : [];
   });
   
   const [activeDoc, setActiveDoc] = useState<Document | null>(() => {
     const saved = localStorage.getItem('study_sphere_active_doc');
-    return saved ? JSON.parse(saved) : (mockDocuments[0] || null);
+    return saved ? JSON.parse(saved) : null;
   });
 
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
-    const saved = localStorage.getItem('study_sphere_chat_messages');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [quizzes, setQuizzes] = useState<QuizQuestion[]>(() => {
-    const savedDoc = localStorage.getItem('study_sphere_active_doc');
-    const parsedDoc = savedDoc ? JSON.parse(savedDoc) : null;
-    const docId = parsedDoc ? parsedDoc.id : (mockDocuments[0]?.id || '');
-    return docId === 'doc-1' ? mockQuizQuestions : [];
-  });
-
-  const [flashcards, setFlashcards] = useState<Flashcard[]>(() => {
-    const savedDoc = localStorage.getItem('study_sphere_active_doc');
-    const parsedDoc = savedDoc ? JSON.parse(savedDoc) : null;
-    const docId = parsedDoc ? parsedDoc.id : (mockDocuments[0]?.id || '');
-    return docId === 'doc-1' ? mockFlashcards : [];
-  });
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [quizzes, setQuizzes] = useState<QuizQuestion[]>([]);
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [username, setUsername] = useState<string>(() => {
     const savedName = localStorage.getItem('name');
@@ -185,33 +170,11 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
           }));
         }
       } else {
-        // If it's the default mock document, load the mock data
-        if (activeDoc.id === 'doc-1') {
-          setChatMessages([]);
-          setQuizzes(mockQuizQuestions);
-          setFlashcards(mockFlashcards);
-          setVisualLearning(
-            "Here is a flowchart mapping the continuous optimization parameter flow:\n\n" +
-            "```mermaid\n" +
-            "graph TD\n" +
-            "A[Active Codex PDF] -->|Linguistic Analysis| B[Feature Matrix X]\n" +
-            "B -->|Parameter Dot Product| C[Linear Model prediction: w^T x + b]\n" +
-            "C -->|Compute Contours| D[Convex Loss bowl J]\n" +
-            "D -->|Derivative Slopes| E[Stochastic Gradient Descent]\n" +
-            "E -->|Weight Regularization| F[Generalized Generalization Bounds]\n" +
-            "```\n\n" +
-            "### Key Visual Components\n" +
-            "• **Feature Matrix X**: Represents input vectors.\n" +
-            "• **Convex Loss Bowl J**: Mathematical function guaranteeing a global minimum.\n" +
-            "• **Stochastic Gradient Descent**: Step-by-step optimization path."
-          );
-        } else {
-          // Initialize a fresh empty session
-          setChatMessages([]);
-          setQuizzes([]);
-          setFlashcards([]);
-          setVisualLearning('');
-        }
+        // Initialize a fresh empty session
+        setChatMessages([]);
+        setQuizzes([]);
+        setFlashcards([]);
+        setVisualLearning('');
       }
       setTimeout(() => {
         isLoadingSessionRef.current = false;
