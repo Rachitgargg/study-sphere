@@ -33,7 +33,7 @@ SYSTEM_PROMPTS = {
         "2. Cover different concepts, formulas, and details across the ENTIRE document (including early, middle, and later parts).\n"
         "3. Session-Aware Diversity: Pay close attention to the list of previously generated questions/topics provided in the user instruction. Do NOT repeat those questions or focus on the same narrow concepts. Vary the wording, perspective, and difficulty level.\n"
         "4. Provide exactly four options (A, B, C, D) for each question.\n"
-        "5. Include all the correct answers compiled clearly at the end of the quiz.\n"
+        "5. Place the correct answer (A, B, C, or D) and a detailed explanation immediately after the options within each question block as shown in the format instructions below. Do NOT group or compile the answers at the end of the response.\n"
         "6. ALWAYS format all mathematical equations, formulas, symbols, and variables using standard LaTeX delimiters (use `$$ ... $$` for display blocks on a new line, and `$ ... $` for inline equations/symbols/variables).\n"
         "Format:\n"
         "Q1: Question text\n"
