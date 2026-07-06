@@ -25,10 +25,7 @@ export const QuizMode: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
-  // Settings states for custom counts
-  const [quizSize, setQuizSize] = useState('10');
-  const [customQuizSize, setCustomQuizSize] = useState('');
-  const [isCustomQuiz, setIsCustomQuiz] = useState(false);
+  const [quizCount, setQuizCount] = useState('10');
 
   const docName = activeDoc ? activeDoc.name : 'No active document';
 
@@ -37,20 +34,29 @@ export const QuizMode: React.FC = () => {
     setIsGenerating(true);
     setGenerationError(null);
     try {
-      const finalSize = isCustomQuiz ? Math.max(1, Math.min(50, parseInt(customQuizSize) || 10)) : parseInt(quizSize);
-      let prompt = `Generate a multiple-choice quiz (MCQ) containing exactly ${finalSize} questions based on the provided document contexts. `;
-      prompt += `Cover distinct concepts, avoid repeating the same topic or wording, and make each question add new coverage across the document. `;
-      prompt += `Each question should have options A, B, C, D and explicitly state the correct answer as 'Answer: [A/B/C/D]'. Provide a short explanation under 'Explanation:'.`;
-      const result = await sendChatMessage(prompt, 'quiz');
-      const parsed = parseQuiz(result.answer);
-      if (parsed && parsed.length > 0) {
+      const finalSize = Math.max(1, Math.min(20, parseInt(quizCount) || 10));
+      const prompt = `Generate exactly ${finalSize} quiz questions based on the provided document contexts. ` +
+        `Cover distinct concepts, avoid repeating the same topic or wording, and make each question add new coverage across the document. ` +
+        `Each question should have options A, B, C, D and explicitly state the correct answer as 'Answer: [A/B/C/D]'. Provide a short explanation under 'Explanation:'.`;
+
+      let parsed = [];
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const result = await sendChatMessage(prompt, 'quiz');
+        const candidate = parseQuiz(result.answer);
+        if (candidate && candidate.length === finalSize) {
+          parsed = candidate;
+          break;
+        }
+      }
+
+      if (parsed.length === finalSize) {
         setQuizzes(parsed);
         setActiveIdx(0);
         setSelectedOption(null);
         setShowExplanation(false);
         setQuizFinished(false);
       } else {
-        setGenerationError('Failed to parse quiz questions from response. Please try again.');
+        setGenerationError(`Could not generate exactly ${finalSize} quiz questions. Please try again.`);
       }
     } catch (err: any) {
       console.error('[QuizMode] generate error:', err);
@@ -137,46 +143,22 @@ export const QuizMode: React.FC = () => {
               <div className="space-y-4 max-w-xs mx-auto font-sans text-xs">
                 <div className="flex flex-col gap-2 items-start text-left">
                   <span className="text-academic-text-muted font-bold block">Number of Questions</span>
-                  <select
-                    value={isCustomQuiz ? 'custom' : quizSize}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === 'custom') {
-                        setIsCustomQuiz(true);
-                      } else {
-                        setIsCustomQuiz(false);
-                        setQuizSize(val);
-                      }
-                    }}
-                    className="w-full bg-academic-black border border-academic-card text-academic-cream px-3 py-2.5 rounded-lg focus:outline-none focus:border-academic-gold cursor-pointer"
-                  >
-                    <option value="5">5 Questions</option>
-                    <option value="10">10 Questions</option>
-                    <option value="15">15 Questions</option>
-                    <option value="20">20 Questions</option>
-                    <option value="custom">Custom Number...</option>
-                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={quizCount}
+                    onChange={(e) => setQuizCount(e.target.value)}
+                    className="w-full bg-academic-black border border-academic-card text-academic-cream px-3 py-2.5 rounded-lg focus:outline-none focus:border-academic-gold text-center"
+                    placeholder="10"
+                  />
+                  <span className="text-[10px] text-academic-text-muted">Choose 1–20</span>
                 </div>
-
-                {isCustomQuiz && (
-                  <div className="space-y-1.5 text-left animate-fade-in">
-                    <span className="text-academic-text-muted font-bold block">Custom Count (1-50)</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="50"
-                      value={customQuizSize}
-                      onChange={(e) => setCustomQuizSize(e.target.value)}
-                      className="w-full bg-academic-black border border-academic-card text-academic-cream px-3 py-2.5 rounded-lg focus:outline-none focus:border-academic-gold text-center"
-                      placeholder="Enter 1 to 50"
-                    />
-                  </div>
-                )}
               </div>
 
               <button
                 onClick={handleGenerate}
-                disabled={isCustomQuiz && (!customQuizSize || parseInt(customQuizSize) < 1 || parseInt(customQuizSize) > 50)}
+                disabled={!quizCount || parseInt(quizCount) < 1 || parseInt(quizCount) > 20}
                 className="px-6 py-2.5 bg-academic-gold hover:bg-academic-gold-muted text-academic-black font-sans font-bold text-xs tracking-wider rounded-lg shadow-md transition-all cursor-pointer border-0 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Generate Interactive Quiz

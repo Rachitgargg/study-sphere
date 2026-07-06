@@ -23,10 +23,7 @@ export const Flashcards: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
-  // Settings states for custom counts
-  const [flashcardCount, setFlashcardCount] = useState('15');
-  const [customFlashcardCount, setCustomFlashcardCount] = useState('');
-  const [isCustomFlashcard, setIsCustomFlashcard] = useState(false);
+  const [flashcardCount, setFlashcardCount] = useState('10');
 
   const docName = activeDoc ? activeDoc.name : 'No active document';
 
@@ -35,17 +32,26 @@ export const Flashcards: React.FC = () => {
     setIsGenerating(true);
     setGenerationError(null);
     try {
-      const finalCount = isCustomFlashcard ? Math.max(1, Math.min(50, parseInt(customFlashcardCount) || 15)) : parseInt(flashcardCount);
-      let prompt = `Generate a set of study flashcards containing exactly ${finalCount} cards based on the provided document contexts. `;
-      prompt += `Distribute the cards across different concepts and avoid repeated wording or repeated concepts within the same deck. `;
-      prompt += `Maintain the strict formatting of 'Card 1:\nFront: [Question/Concept]\nBack: [Brief, precise explanation/answer]'.`;
-      const result = await sendChatMessage(prompt, 'flashcards');
-      const parsed = parseFlashcards(result.answer);
-      if (parsed && parsed.length > 0) {
+      const finalCount = Math.max(1, Math.min(20, parseInt(flashcardCount) || 10));
+      const prompt = `Generate exactly ${finalCount} flashcards based on the provided document contexts. ` +
+        `Distribute the cards across different concepts and avoid repeated wording or repeated concepts within the same deck. ` +
+        `Maintain the strict formatting of 'Card 1:\nFront: [Question/Concept]\nBack: [Brief, precise explanation/answer]'.`;
+
+      let parsed = [];
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const result = await sendChatMessage(prompt, 'flashcards');
+        const candidate = parseFlashcards(result.answer);
+        if (candidate && candidate.length === finalCount) {
+          parsed = candidate;
+          break;
+        }
+      }
+
+      if (parsed.length === finalCount) {
         setFlashcards(parsed);
         setCurrentIdx(0);
       } else {
-        setGenerationError('No flashcards could be generated from the document content. Try again.');
+        setGenerationError(`Could not generate exactly ${finalCount} flashcards. Please try again.`);
       }
     } catch (err: any) {
       console.error('[Flashcards] generate error:', err);
@@ -132,46 +138,22 @@ export const Flashcards: React.FC = () => {
               <div className="space-y-4 max-w-xs mx-auto font-sans text-xs">
                 <div className="flex flex-col gap-2 items-start text-left">
                   <span className="text-academic-text-muted font-bold block">Number of Flashcards</span>
-                  <select
-                    value={isCustomFlashcard ? 'custom' : flashcardCount}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === 'custom') {
-                        setIsCustomFlashcard(true);
-                      } else {
-                        setIsCustomFlashcard(false);
-                        setFlashcardCount(val);
-                      }
-                    }}
-                    className="w-full bg-academic-black border border-academic-card text-academic-cream px-3 py-2.5 rounded-lg focus:outline-none focus:border-academic-gold cursor-pointer"
-                  >
-                    <option value="5">5 Flashcards</option>
-                    <option value="10">10 Flashcards</option>
-                    <option value="15">15 Flashcards</option>
-                    <option value="20">20 Flashcards</option>
-                    <option value="custom">Custom Number...</option>
-                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={flashcardCount}
+                    onChange={(e) => setFlashcardCount(e.target.value)}
+                    className="w-full bg-academic-black border border-academic-card text-academic-cream px-3 py-2.5 rounded-lg focus:outline-none focus:border-academic-gold text-center"
+                    placeholder="10"
+                  />
+                  <span className="text-[10px] text-academic-text-muted">Choose 1–20</span>
                 </div>
-
-                {isCustomFlashcard && (
-                  <div className="space-y-1.5 text-left animate-fade-in">
-                    <span className="text-academic-text-muted font-bold block">Custom Count (1-50)</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="50"
-                      value={customFlashcardCount}
-                      onChange={(e) => setCustomFlashcardCount(e.target.value)}
-                      className="w-full bg-academic-black border border-academic-card text-academic-cream px-3 py-2.5 rounded-lg focus:outline-none focus:border-academic-gold text-center"
-                      placeholder="Enter 1 to 50"
-                    />
-                  </div>
-                )}
               </div>
 
               <button
                 onClick={handleGenerate}
-                disabled={isCustomFlashcard && (!customFlashcardCount || parseInt(customFlashcardCount) < 1 || parseInt(customFlashcardCount) > 50)}
+                disabled={!flashcardCount || parseInt(flashcardCount) < 1 || parseInt(flashcardCount) > 20}
                 className="px-6 py-2.5 bg-academic-gold hover:bg-academic-gold-muted text-academic-black font-sans font-bold text-xs tracking-wider rounded-lg shadow-md transition-all cursor-pointer border-0 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Generate Study Deck
