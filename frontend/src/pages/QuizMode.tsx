@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStudySphere } from '../context/StudySphereContext';
 import { useNavigate } from 'react-router-dom';
 import { MathText } from '../components/MathText';
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export const QuizMode: React.FC = () => {
-  const { quizzes, setQuizzes, submitQuizAnswer, resetQuiz, activeDoc } = useStudySphere();
+  const { quizzes, setQuizzes, submitQuizAnswer, resetQuiz, activeDoc, completeQuiz } = useStudySphere();
   const navigate = useNavigate();
   const [activeIdx, setActiveIdx] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -105,6 +105,12 @@ export const QuizMode: React.FC = () => {
   const answeredCount = safeQuizzes.filter(q => q.userAnswer !== undefined).length;
   const correctCount = safeQuizzes.filter(q => q.userAnswer !== undefined && q.userAnswer === q.correctAnswer).length;
   const percentage = safeQuizzes.length > 0 ? Math.round((correctCount / safeQuizzes.length) * 100) : 0;
+
+  useEffect(() => {
+    if (quizFinished && safeQuizzes.length > 0) {
+      completeQuiz?.(percentage);
+    }
+  }, [quizFinished]);
 
   if (isGenerating) {
     return (

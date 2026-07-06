@@ -61,6 +61,9 @@ interface StudySphereContextType {
   setVisualLearning: (content: string) => void;
   setQuizzes: React.Dispatch<React.SetStateAction<QuizQuestion[]>>;
   setFlashcards: React.Dispatch<React.SetStateAction<Flashcard[]>>;
+  completedQuizzes: number;
+  averageQuizAccuracy: number;
+  completeQuiz: (accuracy: number) => void;
 }
 
 const defaultWeeklyHours = [
@@ -121,6 +124,31 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const saved = localStorage.getItem('study_sphere_weekly_hours');
     return saved ? JSON.parse(saved) : defaultWeeklyHours;
   });
+
+  const [completedQuizzes, setCompletedQuizzes] = useState<number>(() => {
+    const saved = localStorage.getItem('study_sphere_completed_quizzes');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  const [averageQuizAccuracy, setAverageQuizAccuracy] = useState<number>(() => {
+    const saved = localStorage.getItem('study_sphere_quiz_accuracy');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  const completeQuiz = (accuracy: number) => {
+    setCompletedQuizzes(prevCount => {
+      const newCount = prevCount + 1;
+      localStorage.setItem('study_sphere_completed_quizzes', String(newCount));
+      
+      setAverageQuizAccuracy(prevAccuracy => {
+        const newAccuracy = Math.round(((prevAccuracy * prevCount) + accuracy) / newCount);
+        localStorage.setItem('study_sphere_quiz_accuracy', String(newAccuracy));
+        return newAccuracy;
+      });
+      
+      return newCount;
+    });
+  };
 
   // Keep localStorage updated when lists change
   useEffect(() => {
@@ -330,8 +358,12 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
     localStorage.removeItem('study_sphere_documents');
     localStorage.removeItem('study_sphere_active_doc');
     localStorage.removeItem('study_sphere_chat_messages');
+    localStorage.removeItem('study_sphere_completed_quizzes');
+    localStorage.removeItem('study_sphere_quiz_accuracy');
     setStudyTime(0);
     setWeeklyHours(defaultWeeklyHours);
+    setCompletedQuizzes(0);
+    setAverageQuizAccuracy(0);
     setDocuments([]);
     setActiveDoc(null);
     setChatMessages([]);
@@ -489,7 +521,10 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
         setOnboardingComplete,
         resetOnboarding,
         visualLearning,
-        setVisualLearning
+        setVisualLearning,
+        completedQuizzes,
+        averageQuizAccuracy,
+        completeQuiz
       }}
     >
       {children}

@@ -25,7 +25,9 @@ export const Dashboard: React.FC = () => {
     onboardingComplete,
     setOnboardingComplete,
     studyTime,
-    weeklyHours
+    weeklyHours,
+    completedQuizzes,
+    averageQuizAccuracy
   } = useStudySphere();
 
   const navigate = useNavigate();
@@ -75,8 +77,8 @@ export const Dashboard: React.FC = () => {
     },
     { 
       label: 'Quizzes Completed', 
-      value: '6 Completed', 
-      desc: '88% Average Accuracy', 
+      value: completedQuizzes > 0 ? `${completedQuizzes} Completed` : '0 Completed', 
+      desc: completedQuizzes > 0 ? `${averageQuizAccuracy}% Average Accuracy` : 'No evaluations logged', 
       icon: GraduationCap, 
       color: 'text-cyan-400 bg-cyan-950/20 border-cyan-500/20' 
     }
