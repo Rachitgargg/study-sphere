@@ -336,6 +336,7 @@ export const Chat: React.FC = () => {
       await sendChatMessageStream(
         augmentedMessage,
         mode,
+        activeDoc?.name,
         (context) => {
           // OnContext callback: updates context preview source lists
           updateLastChatMessage('', false, context.retrieved_context, context.sources);

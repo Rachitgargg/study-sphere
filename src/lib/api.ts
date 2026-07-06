@@ -52,13 +52,22 @@ export async function uploadDocument(file: File): Promise<UploadResponse> {
   return response.json();
 }
 
-export async function sendChatMessage(message: string, mode: string): Promise<ChatResponse> {
+export async function sendChatMessage(
+  message: string, 
+  mode: string, 
+  activeDocName?: string
+): Promise<ChatResponse> {
   const response = await fetch(`${API_BASE_URL}/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ message, mode, stream: false }),
+    body: JSON.stringify({ 
+      message, 
+      mode, 
+      stream: false,
+      document_ids: activeDocName ? [activeDocName] : undefined
+    }),
   });
 
   if (!response.ok) {
@@ -80,6 +89,7 @@ export async function sendChatMessage(message: string, mode: string): Promise<Ch
 export async function sendChatMessageStream(
   message: string,
   mode: string,
+  activeDocName: string | undefined,
   onContext: (context: { retrieved_context: RetrievedChunk[]; sources: string[] }) => void,
   onToken: (token: string) => void,
   onError: (error: Error) => void,
@@ -91,7 +101,12 @@ export async function sendChatMessageStream(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message, mode, stream: true }),
+      body: JSON.stringify({ 
+        message, 
+        mode, 
+        stream: true,
+        document_ids: activeDocName ? [activeDocName] : undefined
+      }),
     });
 
     if (!response.ok) {
@@ -108,7 +123,7 @@ export async function sendChatMessageStream(
     }
 
     if (!response.body) {
-      throw new Error('Response body stream is empty or inaccessible');
+      throw new Error('Readable stream not supported.');
     }
 
     const reader = response.body.getReader();
@@ -121,8 +136,6 @@ export async function sendChatMessageStream(
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
-      
-      // Keep last unfinished line in buffer
       buffer = lines.pop() || '';
 
       for (const line of lines) {
@@ -137,29 +150,11 @@ export async function sendChatMessageStream(
           } else if (parsed.type === 'token') {
             onToken(parsed.content);
           }
-        } catch (err) {
-          console.error('Error parsing stream line:', err, line);
+        } catch (e) {
+          console.warn('JSON parsing error in stream block:', e, line);
         }
       }
     }
-
-    // Process remaining buffer
-    if (buffer.trim()) {
-      try {
-        const parsed = JSON.parse(buffer);
-        if (parsed.type === 'context') {
-          onContext({
-            retrieved_context: parsed.retrieved_context,
-            sources: parsed.sources,
-          });
-        } else if (parsed.type === 'token') {
-          onToken(parsed.content);
-        }
-      } catch (err) {
-        console.error('Error parsing stream buffer remaining:', err);
-      }
-    }
-
     onComplete();
   } catch (err: any) {
     onError(err);

@@ -4,16 +4,20 @@ import { useNavigate } from 'react-router-dom';
 import { 
   GitBranch, 
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Search,
+  BookOpen,
+  Info
 } from 'lucide-react';
 
 export const KnowledgeMap: React.FC = () => {
   const { documents, setActiveDoc } = useStudySphere();
   const navigate = useNavigate();
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [searchFilter, setSearchFilter] = useState('');
 
   // Gather dynamic nodes and links based on the actual list of cataloged documents
-  const nodes: { id: string; label: string; type: 'document' | 'concept' }[] = [];
+  const nodes: { id: string; label: string; type: 'document' | 'concept'; parentDoc?: string }[] = [];
   const links: { source: string; target: string }[] = [];
   const nodeCoords: { [key: string]: { x: number; y: number } } = {};
 
@@ -46,7 +50,8 @@ export const KnowledgeMap: React.FC = () => {
       nodes.push({
         id: conceptId,
         label: concept,
-        type: 'concept'
+        type: 'concept',
+        parentDoc: doc.name
       });
 
       // Space out child concepts around their parent document node
@@ -55,8 +60,8 @@ export const KnowledgeMap: React.FC = () => {
       const conceptY = docY + 35 * Math.sin(conceptAngle);
 
       nodeCoords[conceptId] = {
-        x: Math.max(30, Math.min(470, conceptX)),
-        y: Math.max(30, Math.min(320, conceptY))
+        x: Math.max(35, Math.min(465, conceptX)),
+        y: Math.max(35, Math.min(315, conceptY))
       };
 
       // Add parent-child link
@@ -94,34 +99,52 @@ export const KnowledgeMap: React.FC = () => {
         .map(l => (l.source === activeNodeId ? l.target : l.source))
     : [];
 
+  const filterText = searchFilter.toLowerCase().trim();
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Title */}
-      <div>
-        <h2 className="font-serif text-3xl font-bold tracking-tight text-academic-cream">
-          Concept Knowledge Map
-        </h2>
-        <p className="text-sm text-academic-text-muted mt-1 font-serif">
-          Visualize semantic paths and cross-document mathematical connections.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="font-serif text-3xl font-bold tracking-tight text-academic-cream">
+            Concept Knowledge Map
+          </h2>
+          <p className="text-sm text-academic-text-muted mt-1 font-serif">
+            Visualize semantic paths and cross-document mathematical connections.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Side: Map Visual Canvas */}
-        <div className="lg:col-span-2 bg-academic-paper border border-academic-card rounded-xl p-4 flex flex-col justify-between h-[480px] relative overflow-hidden gold-glow">
-          <div className="absolute top-4 left-4 z-10 flex gap-4 text-[10px] font-mono text-academic-text-muted">
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded bg-academic-gold" />
-              <span>CODIX (DOC)</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded bg-academic-cream border border-academic-card" />
-              <span>CONCEPT</span>
-            </span>
+        <div className="lg:col-span-2 bg-academic-paper border border-academic-card rounded-xl p-4 flex flex-col justify-between h-[510px] relative overflow-hidden gold-glow">
+          {/* Top Panel: Legend & Concept search bar */}
+          <div className="absolute top-4 left-4 z-10 flex flex-col gap-2.5 max-w-xs text-left">
+            <div className="flex gap-4 text-[10px] font-mono text-academic-text-muted bg-academic-black/60 border border-academic-card/50 p-2 rounded-lg backdrop-blur-md">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded bg-academic-gold" />
+                <span>CODIX (DOC)</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded bg-academic-cream border border-academic-card/85" />
+                <span>CONCEPT</span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 bg-academic-black/80 border border-academic-card/80 rounded-lg px-2.5 py-1.5 w-48 backdrop-blur-md">
+              <Search className="w-3.5 h-3.5 text-academic-text-muted" />
+              <input
+                type="text"
+                placeholder="Filter concepts..."
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                className="bg-transparent text-[10px] text-academic-cream focus:outline-none font-sans w-full placeholder-academic-text-muted/60"
+              />
+            </div>
           </div>
 
-          <div className="absolute top-4 right-4 z-10 text-[10px] font-mono text-academic-gold bg-academic-gold/5 border border-academic-gold/10 rounded px-2 py-0.5 animate-pulse">
-            Interactive Topology Map
+          <div className="absolute top-4 right-4 z-10 text-[10px] font-mono text-academic-gold bg-academic-gold/5 border border-academic-gold/10 rounded px-2.5 py-1 backdrop-blur-md">
+            Interactive Network Topology
           </div>
 
           {/* Interactive SVG Network Graph */}
@@ -133,7 +156,7 @@ export const KnowledgeMap: React.FC = () => {
               >
                 <defs>
                   <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.2" />
+                    <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.25" />
                     <stop offset="100%" stopColor="#D4AF37" stopOpacity="0" />
                   </radialGradient>
                 </defs>
@@ -143,6 +166,12 @@ export const KnowledgeMap: React.FC = () => {
                   const sCoord = nodeCoords[link.source];
                   const tCoord = nodeCoords[link.target];
                   if (!sCoord || !tCoord) return null;
+
+                  const sourceNode = nodes.find(n => n.id === link.source);
+                  const targetNode = nodes.find(n => n.id === link.target);
+                  const isFilteredOut = filterText !== '' && 
+                    !sourceNode?.label.toLowerCase().includes(filterText) && 
+                    !targetNode?.label.toLowerCase().includes(filterText);
 
                   const isHighlight = activeNodeId === link.source || activeNodeId === link.target;
                   return (
@@ -155,6 +184,7 @@ export const KnowledgeMap: React.FC = () => {
                       stroke={isHighlight ? '#D4AF37' : '#1B1E2B'}
                       strokeWidth={isHighlight ? '1.5' : '0.8'}
                       strokeDasharray={isHighlight ? '' : '2,2'}
+                      opacity={isFilteredOut ? '0.15' : '1'}
                       className="transition-all duration-300"
                     />
                   );
@@ -168,6 +198,8 @@ export const KnowledgeMap: React.FC = () => {
                   const isSelected = activeNodeId === node.id;
                   const isAdjacent = connectedNodeIds.includes(node.id);
                   const isDoc = node.type === 'document';
+                  const isMatched = filterText !== '' && node.label.toLowerCase().includes(filterText);
+                  const isFilteredOut = filterText !== '' && !isMatched;
 
                   let nodeColor = isDoc ? '#D4AF37' : '#8E95A5';
                   let radius = isDoc ? 7 : 4.5;
@@ -183,14 +215,21 @@ export const KnowledgeMap: React.FC = () => {
                     strokeWidth = '1';
                   }
 
+                  if (isMatched) {
+                    strokeColor = '#D4AF37';
+                    strokeWidth = '1.5';
+                    radius += 1.5;
+                  }
+
                   return (
                     <g 
                       key={node.id}
                       onClick={() => handleNodeClick(node.id)}
                       className="cursor-pointer group"
+                      opacity={isFilteredOut ? '0.2' : '1'}
                     >
-                      {/* Glow backdrop for selected */}
-                      {isSelected && (
+                      {/* Glow backdrop for selected or searched matches */}
+                      {(isSelected || isMatched) && (
                         <circle
                           cx={coord.x}
                           cy={coord.y}
@@ -211,16 +250,16 @@ export const KnowledgeMap: React.FC = () => {
                         className="transition-all duration-200"
                       />
 
-                      {/* Muted tiny label if document or selected */}
-                      {(isDoc || isSelected) && (
+                      {/* Muted label for documents, active node, or searched matches */}
+                      {(isDoc || isSelected || isMatched) && (
                         <text
                           x={coord.x}
                           y={coord.y - (radius + 4)}
-                          fill={isSelected ? '#F5F2EB' : '#8E95A5'}
+                          fill={(isSelected || isMatched) ? '#F5F2EB' : '#8E95A5'}
                           fontSize="6"
                           fontFamily="monospace"
                           textAnchor="middle"
-                          className="transition-colors pointer-events-none tracking-tight"
+                          className="transition-colors pointer-events-none tracking-tight font-bold"
                         >
                           {node.label.split('.')[0].substring(0, 15)}
                         </text>
@@ -237,30 +276,41 @@ export const KnowledgeMap: React.FC = () => {
             )}
           </div>
 
-          <div className="p-3 bg-academic-black/50 rounded-lg text-[10px] font-mono text-academic-text-muted/80 text-center">
-            Click any coordinate dot to lock focus and load context abstracts
+          <div className="p-3 bg-academic-black/50 rounded-lg text-[10px] font-mono text-academic-text-muted/80 text-center flex items-center justify-center gap-1.5 border border-academic-card/45">
+            <Info className="w-3.5 h-3.5 text-academic-gold" />
+            <span>Click any coordinate dot to lock focus and load context abstracts</span>
           </div>
         </div>
 
         {/* Right Side: Selected Node Detail Summary Card */}
         <div className="space-y-4">
-          <div className="bg-academic-paper border border-academic-card p-6 rounded-xl min-h-[320px] flex flex-col justify-between gold-glow animate-fade-in">
+          <div className="bg-academic-paper border border-academic-card p-6 rounded-xl min-h-[350px] flex flex-col justify-between gold-glow animate-fade-in text-left">
             <div className="space-y-4">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-academic-gold/5 border border-academic-gold/20 rounded-lg text-academic-gold">
                   <GitBranch className="w-5.5 h-5.5" />
                 </div>
-                <div>
-                  <span className="text-[9px] font-mono text-academic-gold tracking-widest uppercase">
+                <div className="min-w-0">
+                  <span className="text-[9px] font-mono text-academic-gold tracking-widest uppercase block">
                     {activeNodeData.type === 'document' ? 'Bibliography Source' : 'Linguistic Node Concept'}
                   </span>
-                  <h3 className="font-serif text-md font-bold text-academic-cream leading-snug">
+                  <h3 className="font-serif text-md font-bold text-academic-cream leading-snug truncate" title={activeNodeData.label}>
                     {activeNodeData.label}
                   </h3>
                 </div>
               </div>
 
               <div className="h-px bg-academic-card/50 my-2" />
+
+              {/* Dynamic parent doc link */}
+              {activeNodeData.type === 'concept' && activeNodeData.parentDoc && (
+                <div className="bg-academic-black/40 border border-academic-card/65 p-2 rounded flex items-center gap-2 text-[10px] font-mono">
+                  <BookOpen className="w-3.5 h-3.5 text-academic-gold flex-shrink-0" />
+                  <span className="text-academic-text-muted truncate">
+                    Source: <strong className="text-academic-cream">{activeNodeData.parentDoc}</strong>
+                  </span>
+                </div>
+              )}
 
               <div className="space-y-2 font-serif">
                 <span className="text-[10px] font-mono text-academic-text-muted uppercase tracking-wider block">Context Abstract</span>
@@ -278,7 +328,7 @@ export const KnowledgeMap: React.FC = () => {
               {/* Connections list */}
               <div className="space-y-2 pt-2">
                 <span className="text-[10px] font-mono text-academic-text-muted uppercase tracking-wider block text-left">Connected Nodes</span>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
                   {connectedNodeIds.length > 0 ? (
                     connectedNodeIds.map((cId) => {
                       const cNode = nodes.find(n => n.id === cId);
@@ -321,7 +371,7 @@ export const KnowledgeMap: React.FC = () => {
           </div>
 
           {/* Quick Stats */}
-          <div className="bg-academic-paper border border-academic-card p-5 rounded-xl gold-glow">
+          <div className="bg-academic-paper border border-academic-card p-5 rounded-xl gold-glow text-left">
             <h4 className="font-serif text-xs font-bold text-academic-cream uppercase tracking-widest mb-3">
               Knowledge Map Index
             </h4>

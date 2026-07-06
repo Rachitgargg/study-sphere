@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Document, ChatMessage, QuizQuestion, Flashcard } from '../types';
 import { mockDocuments, mockFlashcards, mockQuizQuestions } from '../lib/mockData';
 
@@ -57,6 +57,8 @@ interface StudySphereContextType {
   weeklyHours: { day: string; hours: number }[];
   incrementStudyTime: (seconds: number) => void;
   resetStats: () => void;
+  visualLearning: string;
+  setVisualLearning: (content: string) => void;
   setQuizzes: React.Dispatch<React.SetStateAction<QuizQuestion[]>>;
   setFlashcards: React.Dispatch<React.SetStateAction<Flashcard[]>>;
 }
@@ -108,6 +110,15 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const savedName = localStorage.getItem('name');
     return savedName ? savedName : 'Alex';
   });
+
+  // Sessions map state
+  const [sessions, setSessions] = useState<{ [docId: string]: any }>(() => {
+    const saved = localStorage.getItem('study_sphere_sessions');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // visualLearning content state
+  const [visualLearning, setVisualLearning] = useState<string>('');
   const [onboardingComplete, setOnboardingComplete] = useState<boolean>(() => {
     const savedOnboarding = localStorage.getItem('onboardingComplete');
     return savedOnboarding === 'true';
@@ -136,8 +147,8 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [activeDoc]);
 
   useEffect(() => {
-    localStorage.setItem('study_sphere_chat_messages', JSON.stringify(chatMessages));
-  }, [chatMessages]);
+    localStorage.setItem('study_sphere_sessions', JSON.stringify(sessions));
+  }, [sessions]);
 
   useEffect(() => {
     localStorage.setItem('name', username);
@@ -147,25 +158,172 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
     localStorage.setItem('onboardingComplete', String(onboardingComplete));
   }, [onboardingComplete]);
 
-  // Initialize active doc if null and docs are available
   useEffect(() => {
     if (!activeDoc && documents.length > 0) {
       setActiveDoc(documents[0]);
     }
   }, [documents, activeDoc]);
 
-  // Load mock study materials for default document doc-1, otherwise clear them
+  const isLoadingSessionRef = useRef(false);
+
+  // Load session when activeDoc changes
   useEffect(() => {
     if (activeDoc) {
-      if (activeDoc.id === 'doc-1') {
-        setQuizzes(mockQuizQuestions);
-        setFlashcards(mockFlashcards);
+      isLoadingSessionRef.current = true;
+      const session = sessions[activeDoc.id];
+      if (session) {
+        setChatMessages(session.chatHistory || []);
+        setQuizzes(session.quizzes || []);
+        setFlashcards(session.flashcards || []);
+        setVisualLearning(session.visualLearning || '');
+        if (session.summaries && session.summaries !== activeDoc.summary) {
+          setDocuments(prev => prev.map(doc => {
+            if (doc.id === activeDoc.id) {
+              return { ...doc, summary: session.summaries };
+            }
+            return doc;
+          }));
+        }
       } else {
-        setQuizzes([]);
-        setFlashcards([]);
+        // If it's the default mock document, load the mock data
+        if (activeDoc.id === 'doc-1') {
+          setChatMessages([]);
+          setQuizzes(mockQuizQuestions);
+          setFlashcards(mockFlashcards);
+          setVisualLearning(
+            "Here is a flowchart mapping the continuous optimization parameter flow:\n\n" +
+            "```mermaid\n" +
+            "graph TD\n" +
+            "A[Active Codex PDF] -->|Linguistic Analysis| B[Feature Matrix X]\n" +
+            "B -->|Parameter Dot Product| C[Linear Model prediction: w^T x + b]\n" +
+            "C -->|Compute Contours| D[Convex Loss bowl J]\n" +
+            "D -->|Derivative Slopes| E[Stochastic Gradient Descent]\n" +
+            "E -->|Weight Regularization| F[Generalized Generalization Bounds]\n" +
+            "```\n\n" +
+            "### Key Visual Components\n" +
+            "• **Feature Matrix X**: Represents input vectors.\n" +
+            "• **Convex Loss Bowl J**: Mathematical function guaranteeing a global minimum.\n" +
+            "• **Stochastic Gradient Descent**: Step-by-step optimization path."
+          );
+        } else {
+          // Initialize a fresh empty session
+          setChatMessages([]);
+          setQuizzes([]);
+          setFlashcards([]);
+          setVisualLearning('');
+        }
       }
+      setTimeout(() => {
+        isLoadingSessionRef.current = false;
+      }, 0);
     }
-  }, [activeDoc]);
+  }, [activeDoc?.id]);
+
+  // Synchronize state changes to sessions map
+  useEffect(() => {
+    if (activeDoc && !isLoadingSessionRef.current) {
+      setSessions(prev => ({
+        ...prev,
+        [activeDoc.id]: {
+          ...(prev[activeDoc.id] || {
+            documentId: activeDoc.id,
+            filename: activeDoc.name,
+            chatHistory: [],
+            summaries: activeDoc.summary || '',
+            quizzes: [],
+            flashcards: [],
+            visualLearning: '',
+            revision: ''
+          }),
+          chatHistory: chatMessages
+        }
+      }));
+    }
+  }, [chatMessages, activeDoc?.id]);
+
+  useEffect(() => {
+    if (activeDoc && !isLoadingSessionRef.current) {
+      setSessions(prev => ({
+        ...prev,
+        [activeDoc.id]: {
+          ...(prev[activeDoc.id] || {
+            documentId: activeDoc.id,
+            filename: activeDoc.name,
+            chatHistory: [],
+            summaries: activeDoc.summary || '',
+            quizzes: [],
+            flashcards: [],
+            visualLearning: '',
+            revision: ''
+          }),
+          quizzes: quizzes
+        }
+      }));
+    }
+  }, [quizzes, activeDoc?.id]);
+
+  useEffect(() => {
+    if (activeDoc && !isLoadingSessionRef.current) {
+      setSessions(prev => ({
+        ...prev,
+        [activeDoc.id]: {
+          ...(prev[activeDoc.id] || {
+            documentId: activeDoc.id,
+            filename: activeDoc.name,
+            chatHistory: [],
+            summaries: activeDoc.summary || '',
+            quizzes: [],
+            flashcards: [],
+            visualLearning: '',
+            revision: ''
+          }),
+          flashcards: flashcards
+        }
+      }));
+    }
+  }, [flashcards, activeDoc?.id]);
+
+  useEffect(() => {
+    if (activeDoc && !isLoadingSessionRef.current) {
+      setSessions(prev => ({
+        ...prev,
+        [activeDoc.id]: {
+          ...(prev[activeDoc.id] || {
+            documentId: activeDoc.id,
+            filename: activeDoc.name,
+            chatHistory: [],
+            summaries: activeDoc.summary || '',
+            quizzes: [],
+            flashcards: [],
+            visualLearning: '',
+            revision: ''
+          }),
+          visualLearning: visualLearning
+        }
+      }));
+    }
+  }, [visualLearning, activeDoc?.id]);
+
+  useEffect(() => {
+    if (activeDoc && activeDoc.summary && !isLoadingSessionRef.current) {
+      setSessions(prev => ({
+        ...prev,
+        [activeDoc.id]: {
+          ...(prev[activeDoc.id] || {
+            documentId: activeDoc.id,
+            filename: activeDoc.name,
+            chatHistory: [],
+            summaries: activeDoc.summary || '',
+            quizzes: [],
+            flashcards: [],
+            visualLearning: '',
+            revision: ''
+          }),
+          summaries: activeDoc.summary
+        }
+      }));
+    }
+  }, [activeDoc?.summary, activeDoc?.id]);
 
   // Increment study time and log fraction to current day
   const incrementStudyTime = (secs: number) => {
@@ -366,7 +524,9 @@ export const StudySphereProvider: React.FC<{ children: React.ReactNode }> = ({ c
         updateDocumentSummary,
         onboardingComplete,
         setOnboardingComplete,
-        resetOnboarding
+        resetOnboarding,
+        visualLearning,
+        setVisualLearning
       }}
     >
       {children}

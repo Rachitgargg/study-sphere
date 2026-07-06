@@ -32,7 +32,7 @@ export const SummaryMode: React.FC = () => {
     setGenerationError(null);
     try {
       const prompt = `Generate a structured conceptual summary of this document. Focus on key ideas, equations, and main definitions using clear formatting.`;
-      const result = await sendChatMessage(prompt, 'summary');
+      const result = await sendChatMessage(prompt, 'summary', activeDoc.name);
       if (result.answer) {
         updateDocumentSummary(activeDoc.id, result.answer);
       } else {

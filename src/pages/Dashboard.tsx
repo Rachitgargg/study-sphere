@@ -198,8 +198,14 @@ export const Dashboard: React.FC = () => {
                     {data.hours.toFixed(1)}h
                   </div>
                   {/* Bar */}
-                  <div className="w-10 rounded-t-md bg-academic-card border border-academic-card/80 group-hover:border-academic-gold/50 group-hover:bg-gradient-to-t group-hover:from-academic-gold/10 group-hover:to-academic-gold/30 transition-all cursor-pointer relative flex justify-center overflow-hidden" style={{ height: `${Math.max(heightPercent, 8)}%` }}>
-                    <div className="absolute bottom-0 w-full h-1 bg-academic-gold" />
+                  <div 
+                    className="w-10 rounded-t-md bg-academic-gold/15 border border-academic-gold/25 group-hover:border-academic-gold group-hover:bg-gradient-to-t group-hover:from-academic-gold/20 group-hover:to-academic-gold/40 transition-all cursor-pointer relative flex justify-center overflow-hidden shadow-inner" 
+                    style={{ height: `${Math.max(heightPercent, 8)}%` }}
+                  >
+                    <div className="absolute bottom-0 w-full h-1.5 bg-academic-gold animate-pulse" />
+                    {data.hours > 0 && (
+                      <div className="absolute inset-0 bg-gradient-to-t from-academic-gold/10 to-academic-gold/30" />
+                    )}
                   </div>
                   {/* Label */}
                   <span className="text-[10px] font-mono text-academic-text-muted mt-3 uppercase tracking-wider">{data.day}</span>

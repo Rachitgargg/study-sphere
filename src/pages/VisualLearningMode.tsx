@@ -1,47 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useStudySphere } from '../context/StudySphereContext';
 import { useNavigate } from 'react-router-dom';
 import { MathText } from '../components/MathText';
 import { sendChatMessage } from '../lib/api';
 import { 
   ArrowLeft, 
-  Sparkles, 
-  BookMarked,
   Network,
   Info
 } from 'lucide-react';
 
 export const VisualLearningMode: React.FC = () => {
-  const { activeDoc } = useStudySphere();
+  const { activeDoc, visualLearning, setVisualLearning } = useStudySphere();
   const navigate = useNavigate();
-  const [visualContent, setVisualContent] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
   const docName = activeDoc ? activeDoc.name : 'No active document';
-
-  // Load mock visualization on initial load for the default document doc-1
-  useEffect(() => {
-    if (activeDoc?.id === 'doc-1') {
-      setVisualContent(
-        "Here is a flowchart mapping the continuous optimization parameter flow:\n\n" +
-        "```mermaid\n" +
-        "graph TD\n" +
-        "A[Active Codex PDF] -->|Linguistic Analysis| B[Feature Matrix X]\n" +
-        "B -->|Parameter Dot Product| C[Linear Model prediction: w^T x + b]\n" +
-        "C -->|Compute Contours| D[Convex Loss bowl J]\n" +
-        "D -->|Derivative Slopes| E[Stochastic Gradient Descent]\n" +
-        "E -->|Weight Regularization| F[Generalized Generalization Bounds]\n" +
-        "```\n\n" +
-        "### Key Visual Components\n" +
-        "• **Feature Matrix X**: Represents input vectors.\n" +
-        "• **Convex Loss Bowl J**: Mathematical function guaranteeing a global minimum.\n" +
-        "• **Stochastic Gradient Descent**: Step-by-step optimization path."
-      );
-    } else {
-      setVisualContent('');
-    }
-  }, [activeDoc]);
 
   const handleGenerate = async () => {
     if (!activeDoc) return;
@@ -54,9 +28,9 @@ export const VisualLearningMode: React.FC = () => {
         `a decision tree, or a comparison table. Prefer Mermaid for node-link structures and use a fenced text or ascii block ` +
         `for fallback flowcharts when Mermaid is not appropriate. Keep the output educational, concise, and directly tied to the document context.`
       );
-      const result = await sendChatMessage(prompt, 'visual_learning');
+      const result = await sendChatMessage(prompt, 'visual_learning', activeDoc?.name);
       if (result.answer) {
-        setVisualContent(result.answer);
+        setVisualLearning(result.answer);
       } else {
         setGenerationError('Failed to generate visual mappings from context. Try again.');
       }
@@ -90,7 +64,7 @@ export const VisualLearningMode: React.FC = () => {
       <div className="bg-indigo-950/20 border border-indigo-500/20 p-4 rounded-xl flex items-start gap-3 text-xs text-indigo-300 font-sans">
         <Info className="w-4.5 h-4.5 text-indigo-400 mt-0.5 flex-shrink-0" />
         <span>
-          <strong>Visual Learning Mode:</strong> Visual Learning explains concepts using Mermaid diagrams, text flowcharts, concept maps, process diagrams, timelines, hierarchy diagrams, decision trees, and comparison tables.
+          <strong>Visual Learning Mode:</strong> Visual Learning explains concepts using diagrams, flowcharts and structured visual representations.
         </span>
       </div>
 
@@ -102,7 +76,7 @@ export const VisualLearningMode: React.FC = () => {
             StudySphere AI is running layout indexers to draw semantic paths and flowchart entities.
           </p>
         </div>
-      ) : visualContent ? (
+      ) : visualLearning ? (
         <div className="bg-academic-paper border border-academic-card p-6 md:p-8 rounded-xl min-h-[400px] gold-glow animate-fade-in space-y-6">
           <div>
             <h3 className="font-serif text-lg font-bold text-academic-cream">Linguistic Diagram Mapping</h3>
@@ -111,7 +85,7 @@ export const VisualLearningMode: React.FC = () => {
           </div>
           
           <div className="font-sans text-xs md:text-sm text-academic-cream/90 leading-relaxed space-y-4 select-text selection:bg-academic-gold/20">
-            <MathText text={visualContent} className="w-full inline-block" />
+            <MathText text={visualLearning} className="w-full inline-block" />
           </div>
 
           <div className="border-t border-academic-card/40 pt-4 flex justify-between">

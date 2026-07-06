@@ -39,7 +39,7 @@ export const Flashcards: React.FC = () => {
 
       let parsed = [];
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        const result = await sendChatMessage(prompt, 'flashcards');
+        const result = await sendChatMessage(prompt, 'flashcards', activeDoc.name);
         const candidate = parseFlashcards(result.answer);
         if (candidate && candidate.length === finalCount) {
           parsed = candidate;

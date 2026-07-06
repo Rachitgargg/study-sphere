@@ -41,7 +41,7 @@ export const QuizMode: React.FC = () => {
 
       let parsed = [];
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        const result = await sendChatMessage(prompt, 'quiz');
+        const result = await sendChatMessage(prompt, 'quiz', activeDoc.name);
         const candidate = parseQuiz(result.answer);
         if (candidate && candidate.length === finalSize) {
           parsed = candidate;
