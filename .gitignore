@@ -1,8 +1,28 @@
+# Node modules
 node_modules/
-build/
 dist/
-coverage/
+.env
+.env.local
+
+# Python virtual environments
+venv/
+.venv/
+backend/venv/
+backend/.venv/
+
+# Python cache files
+**/__pycache__/
+**/*.pyc
+*.pyo
+*.pyd
+
+# StudySphere databases & uploads
+uploads/
+vector_db/
+backend/uploads/
+backend/vector_db/
+
+# OS specific files
 .DS_Store
-*.log
-.env*
-!.env.example
+**/.DS_Store
+Thumbs.db
