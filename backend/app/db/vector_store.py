@@ -4,52 +4,66 @@ Integrates persistent ChromaDB storage and HuggingFace SentenceTransformers embe
 """
 import os
 import functools
-import chromadb
-from sentence_transformers import SentenceTransformer
 from typing import List, Dict, Any
 from app.core.config import settings
 
 class VectorStore:
     def __init__(self):
         # Use an absolute path for the vector database directory
-        db_path = os.path.abspath(settings.VECTOR_DB_DIR)
+        self.db_path = os.path.abspath(settings.VECTOR_DB_DIR)
+        self.persistent = True
+        self._client = None
+        self._collection = None
+        self._model = None
+        print(f"[VectorStore] Placeholder initialized at db path: {self.db_path}")
 
-        if not os.path.exists(db_path):
-            os.makedirs(db_path, exist_ok=True)
+    @property
+    def client(self):
+        if self._client is None:
+            import chromadb
+            if not os.path.exists(self.db_path):
+                os.makedirs(self.db_path, exist_ok=True)
 
-        if not os.path.isdir(db_path):
-            raise RuntimeError(f"Vector DB path exists but is not a directory: {db_path}")
+            if not os.path.isdir(self.db_path):
+                raise RuntimeError(f"Vector DB path exists but is not a directory: {self.db_path}")
 
-        # Ensure the vector storage directory is writable
-        if not os.access(db_path, os.W_OK):
-            try:
-                os.chmod(db_path, 0o775)
-            except Exception:
-                pass
+            # Ensure the vector storage directory is writable
+            if not os.access(self.db_path, os.W_OK):
+                try:
+                    os.chmod(self.db_path, 0o775)
+                except Exception:
+                    pass
 
-        self.persistent = os.access(db_path, os.W_OK)
-        self.db_path = db_path
+            self.persistent = os.access(self.db_path, os.W_OK)
+            if self.persistent:
+                try:
+                    self._client = chromadb.PersistentClient(path=self.db_path)
+                except Exception as e:
+                    print(f"[VectorStore] Persistent client failed: {e}")
+                    self.persistent = False
 
-        if self.persistent:
-            try:
-                self.client = chromadb.PersistentClient(path=db_path)
-            except Exception as e:
-                print(f"[VectorStore] Persistent client failed: {e}")
-                self.persistent = False
+            if not self.persistent:
+                print(f"[VectorStore] Persistent path not writable at {self.db_path}. Falling back to in-memory vector store.")
+                self._client = chromadb.Client()
+        return self._client
 
-        if not self.persistent:
-            print(f"[VectorStore] Persistent path not writable at {db_path}. Falling back to in-memory vector store.")
-            self.client = chromadb.Client()
+    @property
+    def collection(self):
+        if self._collection is None:
+            self._collection = self.client.get_or_create_collection(
+                name="studysphere_chunks",
+                metadata={"hnsw:space": "cosine"} # Use cosine similarity
+            )
+        return self._collection
 
-        # Get or create collection for storing document chunks
-        self.collection = self.client.get_or_create_collection(
-            name="studysphere_chunks",
-            metadata={"hnsw:space": "cosine"} # Use cosine similarity
-        )
-        
-        # Initialize embedding model (SentenceTransformer)
-        self.model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
-        print(f"[VectorStore] Initialized with model: {settings.EMBEDDING_MODEL_NAME} at db path: {db_path} persistent={self.persistent}")
+    @property
+    def model(self):
+        if self._model is None:
+            print(f"[VectorStore] Lazy loading SentenceTransformer model: {settings.EMBEDDING_MODEL_NAME}...")
+            from sentence_transformers import SentenceTransformer
+            self._model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
+            print(f"[VectorStore] Loaded model: {settings.EMBEDDING_MODEL_NAME}")
+        return self._model
 
     def add_documents(self, chunks: List[Dict[str, Any]]) -> bool:
         """
